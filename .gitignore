@@ -1,0 +1,40 @@
+# Dataset WAV files (large, not pushed)
+Cargo/
+Passengership/
+Tanker/
+Tug/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+
+# Pipeline outputs (generated, not source)
+project/outputs/waveforms/
+project/outputs/fft/
+project/outputs/psd/
+project/outputs/spectrograms/
+project/outputs/features/
+project/outputs/reports/residuals/
+project/outputs/reports/noise_models/
+project/outputs/reports/validation/
+project/outputs/reports/gan/
+
+# Keep these committed (summary reports and CSVs worth versioning)
+!project/outputs/reports/dataset_cleanup_report.md
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Models / large binaries
+*.pt
+*.pth
+*.npy
+*.pkl
