@@ -26,8 +26,6 @@ from src.genai.timegan import run_timegan
 from src.genai.ddpm_separator import run_ddpm
 from src.genai.synthetic_generator import run_synthetic_generation
 from src.mapping.rnl_sbn_mapping import run_rnl_sbn_mapping
-from src.classification.dataset import build_dataset
-from src.classification.train import run_classification
 from src.reporting.generate_report import build_report
 
 
@@ -120,11 +118,8 @@ def main():
     print("\n[Phase 12a] RNL-SBN Mapping")
     run_rnl_sbn_mapping(spectral, W, H)
 
-    # Phase 12b – Vessel classification (baseline vs. GenAI-augmented)
-    print("\n[Phase 12b] Vessel Classification (baseline vs. augmented)")
-    baseline_data = build_dataset(preprocessed, augment=False)
-    augmented_data = build_dataset(preprocessed, wgan_models=wgan_models, augment=True)
-    run_classification(baseline_data, augmented_data)
+    # Phase 12b (Vessel Classification) de-emphasized — pipeline focus is
+    # source decomposition (Phase 7b) + residual noise modeling (Phases 8-10C).
 
     # Final report
     print("\n[Report] Building consolidated research report")

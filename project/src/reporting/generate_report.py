@@ -1,7 +1,7 @@
 """
 Generate the final consolidated Markdown research report.
 
-Walks through every phase of the pipeline (1-12b) plus the ablation studies,
+Walks through every phase of the pipeline (1-12a, 7b) plus the ablation studies,
 in plain language, and cites the exact output file each claim is backed by
 (for provenance / defensibility). Reads only files that the pipeline itself
 produces under ``outputs/`` - it does not recompute anything.
@@ -16,7 +16,7 @@ from datetime import datetime
 from src import config
 from src.config import (
     OUTPUTS, OUTPUTS_REPORTS, OUTPUTS_FEATURES, OUTPUTS_GENAI,
-    OUTPUTS_MAPPING, OUTPUTS_CLASSIFICATION, PROJECT_ROOT,
+    OUTPUTS_MAPPING, PROJECT_ROOT,
 )
 from src.decomposition.machinery_decomposition import CATEGORY_DESCRIPTIONS, RESIDUAL_LABEL
 from src.device import get_device
@@ -39,8 +39,8 @@ def build_report():
         f"_Generated: {ts}_",
         "",
         "This report walks through **every stage of the pipeline, in plain language**, "
-        "from raw WAV files to a trained vessel-classification ensemble augmented with "
-        "GenAI-synthesised data. Each section states **what was done, why, what the "
+        "from raw WAV files to named machinery-source decomposition and GenAI-based "
+        "residual noise modeling. Each section states **what was done, why, what the "
         "numbers mean, and exactly which output file backs the claim** so every result "
         "can be traced back to its source (provenance).",
         "",
@@ -83,7 +83,6 @@ def build_report():
         f"| 10D TimeGAN | `TIMEGAN_SEQ_LEN` / `TIMEGAN_HIDDEN` / `TIMEGAN_EPOCHS` / `MAX_SEQUENCES_PER_CLASS` | {config.TIMEGAN_SEQ_LEN} / {config.TIMEGAN_HIDDEN} / {config.TIMEGAN_EPOCHS} / {config.MAX_SEQUENCES_PER_CLASS} |",
         f"| 10B Cond. DDPM | `DIFFUSION_T` / `DDIM_STEPS` / `GUIDANCE_SCALE` / `DIFFUSION_PATCH` / `DIFFUSION_EPOCHS` | {config.DIFFUSION_T} / {config.DDIM_STEPS} / {config.GUIDANCE_SCALE} / {config.DIFFUSION_PATCH} / {config.DIFFUSION_EPOCHS} |",
         f"| 11 Synthetic corpus | `SYNTH_WGAN_PER_CLASS` / `SYNTH_DDPM_PER_CLASS` / `SYNTH_TIMEGAN_PER_CLASS` / `SYNTH_KL_THRESHOLD` | {config.SYNTH_WGAN_PER_CLASS} / {config.SYNTH_DDPM_PER_CLASS} / {config.SYNTH_TIMEGAN_PER_CLASS} / {config.SYNTH_KL_THRESHOLD} |",
-        f"| 12 Classification | `CLASSIFIER_EPOCHS` / `CLASSIFIER_FOLDS` / `MEL_PATCH_SIZE` / `MAX_SEGMENTS_PER_FILE_CLF` | {config.CLASSIFIER_EPOCHS} / {config.CLASSIFIER_FOLDS} / {config.MEL_PATCH_SIZE} / {config.MAX_SEGMENTS_PER_FILE_CLF} |",
         f"| 12a RNL-SBN | `ASSUMED_RANGES_M` | {config.ASSUMED_RANGES_M} m |",
         "",
         "---",
@@ -403,9 +402,9 @@ def build_report():
     L.append("")
     L.append(f"**Why**: Phase 8 showed the residual is non-Gaussian — a GAN "
              "can learn that distribution directly without assuming a parametric form, "
-             "unlike the GMM baseline (Phase 9). The generated residual segments are "
-             "later injected back into real waveforms (Phase 11/12b) as a "
-             "**data-augmentation** mechanism: `x_synth(t) = x_real(t) + eps_synth(t)`.")
+             "unlike the GMM baseline (Phase 9). The generated residual segments feed "
+             "the synthetic acoustic corpus (Phase 11) as a generative model of "
+             "`eps[n]`: `x_synth(t) = x_real(t) + eps_synth(t)`.")
     L.append("")
     L.append(f"Trained for **{config.WGAN_EPOCHS} epochs**, critic updated "
              f"**{config.WGAN_CRITIC_ITERS}x** per generator step, Adam "
@@ -633,121 +632,10 @@ def build_report():
     L.append("\n---\n")
 
     # ════════════════════════════════════════════════════════════════════
-    # 12b Classification
+    # 12b Classification — de-emphasized (pipeline focus is decomposition +
+    # residual noise modeling, not vessel classification). See git history /
+    # earlier report versions for the previous classification section.
     # ════════════════════════════════════════════════════════════════════
-    L += ["## 12b. Vessel Classification — Baseline vs. GenAI-Augmented", ""]
-    L.append("**What this step does:** builds two datasets from the 33 preprocessed "
-             f"signals, each segmented into {config.SEG_DURATION}s windows (50% overlap, "
-             f"capped at {config.MAX_SEGMENTS_PER_FILE_CLF} segments/file):")
-    L.append("")
-    L.append("- **Baseline**: real segments only -> mel-spectrogram patch "
-             f"({config.MEL_PATCH_SIZE}x{config.MEL_PATCH_SIZE}) + MFCC sequence per "
-             "segment.")
-    L.append("- **Augmented**: every real segment is duplicated with WGAN-GP-generated "
-             "residual noise injected — `x_synth(t) = x_real(t) + 0.15 * std(x_real) * "
-             "eps_synth(t)` — doubling the dataset size. Since Phase 7b's time-domain "
-             "`eps[n]` gives every class (including Tug) enough segments to reach the "
-             "4000-segment WGAN-GP training cap, **all 4 classes** now receive "
-             "synthetic-residual augmentation.")
-    L.append("")
-    L.append(f"Four architectures are trained on each dataset "
-             f"(**{config.CLASSIFIER_EPOCHS} epochs**, Adam lr={config.CLASSIFIER_LR}, "
-             f"batch={config.CLASSIFIER_BATCH}), evaluated with "
-             f"**{config.CLASSIFIER_FOLDS}-fold GroupKFold** "
-             "cross-validation **grouped by source file** (so segments from the same "
-             "recording never appear in both train and validation — preventing "
-             "segment-level data leakage), plus a confidence-weighted **Ensemble** "
-             "(softmax-probability average across all 4 models).")
-    L.append("")
-    L.append("| Architecture | Input | Description |")
-    L.append("|---|---|---|")
-    L.append("| CNN | mel patch | 4x Conv2D + BatchNorm + GAP + Dense |")
-    L.append("| ResNet-lite | mel patch | Stem + 3 residual blocks + GAP + Dense |")
-    L.append("| CRNN | mel patch | 3x Conv2D + bidirectional GRU + Dense |")
-    L.append(f"| Transformer | MFCC sequence ({config.N_MFCC}-dim) | CLS-token "
-             "transformer encoder (2 layers, 8 heads) |")
-
-    df_c = _read_csv(OUTPUTS_CLASSIFICATION / "classification_results.csv")
-    df_delta = _read_csv(OUTPUTS_CLASSIFICATION / "classification_delta.csv")
-    df_pc = _read_csv(OUTPUTS_CLASSIFICATION / "classification_per_class.csv")
-
-    if df_c is not None:
-        L.append("")
-        L.append("### Headline results")
-        L.append("")
-        L.append("| Model | Dataset | Accuracy | Macro F1 | ROC-AUC (OvR) |")
-        L.append("|---|---|---|---|---|")
-        for _, row in df_c.iterrows():
-            L.append(f"| {row['model']} | {row['dataset']} | {row['accuracy']:.3f} | "
-                     f"{row['macro_f1']:.3f} | {row['roc_auc']:.3f} |")
-
-    if df_delta is not None:
-        L.append("")
-        L.append("### Effect of GenAI augmentation (delta accuracy = augmented - baseline)")
-        L.append("")
-        L.append("| Model | Baseline acc. | Augmented acc. | Delta |")
-        L.append("|---|---|---|---|")
-        for _, row in df_delta.sort_values("delta_accuracy", ascending=False).iterrows():
-            sign = "+" if row["delta_accuracy"] >= 0 else ""
-            L.append(f"| {row['model']} | {row['baseline']:.3f} | {row['augmented']:.3f} | "
-                     f"{sign}{row['delta_accuracy']:.3f} |")
-        L.append("")
-        best_row = df_delta.sort_values("delta_accuracy", ascending=False).iloc[0]
-        ens_row = df_delta[df_delta["model"] == "Ensemble"].iloc[0]
-        L.append(f"**Every single model improves with GenAI augmentation** "
-                 f"(deltas range from +{df_delta['delta_accuracy'].min():.3f} to "
-                 f"+{df_delta['delta_accuracy'].max():.3f}). The largest gain is "
-                 f"**{best_row['model']} (+{best_row['delta_accuracy']:.3f})**, and the "
-                 f"**Ensemble improves from {ens_row['baseline']:.3f} to "
-                 f"{ens_row['augmented']:.3f} (+{ens_row['delta_accuracy']:.3f})** — the "
-                 "headline number for this whole framework: WGAN-GP-based residual-noise "
-                 "augmentation produces a **real, measured improvement** in vessel "
-                 "classification accuracy on this dataset.")
-        L.append("")
-        L.append("Caveat: with only 33 files and 3-fold GroupKFold, each fold's "
-                 "validation set is ~11 files — these numbers have **high variance** and "
-                 "should be read as a directional result (augmentation helps) rather "
-                 "than a precise accuracy figure. A larger held-out test set would be "
-                 "needed before any operational claim.")
-
-    if df_pc is not None:
-        L.append("")
-        L.append("### Per-class precision / recall / F1 (Ensemble)")
-        L.append("")
-        L.append("| Dataset | Class | Precision | Recall | F1 | Support |")
-        L.append("|---|---|---|---|---|---|")
-        ens = df_pc[df_pc["model"] == "Ensemble"]
-        for _, row in ens.iterrows():
-            L.append(f"| {row['dataset']} | {row['class']} | {row['precision']:.3f} | "
-                     f"{row['recall']:.3f} | {row['f1']:.3f} | {row['support']} |")
-        L.append("")
-        # Highlight Tug specifically since it got no augmentation
-        tug_base = ens[(ens["dataset"] == "baseline") & (ens["class"] == "Tug")]
-        tug_aug = ens[(ens["dataset"] == "augmented") & (ens["class"] == "Tug")]
-        if not tug_base.empty and not tug_aug.empty:
-            L.append(f"**Tug** (the class WGAN-GP could not be trained for — only 3 "
-                     f"files / 6 residual segments) goes from recall="
-                     f"{tug_base['recall'].values[0]:.3f} (baseline) to "
-                     f"{tug_aug['recall'].values[0]:.3f} (augmented) — even though Tug "
-                     "itself received **no synthetic Tug segments**, its score still "
-                     "moves because (a) the *other* classes' augmented segments change "
-                     "what the model learns to use as discriminative features, and "
-                     "(b) GroupKFold reshuffles which files land in which fold. This is "
-                     "a good illustration of why per-class numbers, not just overall "
-                     "accuracy, matter for a 4-class problem with one severely "
-                     "under-represented class.")
-        full_csv_note = ("Full per-class table for every architecture (not just the "
-                         "Ensemble) is in `outputs/classification/classification_per_class.csv`.")
-        L.append("")
-        L.append(full_csv_note)
-
-    L.append("")
-    L.append("Confusion matrices: `outputs/classification/confusion_<Model>_<dataset>.png` "
-             "for every model x {baseline, augmented} combination, plus "
-             "`confusion_Ensemble_<dataset>.png`.")
-    L.append(f"\n_Sources: `outputs/classification/classification_results.csv`, "
-             f"`classification_delta.csv`, `classification_per_class.csv`_\n")
-    L.append("---\n")
 
     # ════════════════════════════════════════════════════════════════════
     # 13 Ablations
@@ -832,9 +720,8 @@ def build_report():
                      f"{b4['latent_silhouette_by_class']}). Note: a *negative* "
                      "silhouette score means the 4 vessel classes are **not** "
                      "well-separated in this latent space under either setting — i.e. "
-                     "the residual-noise floor alone is a weak class signal compared to "
-                     "the full mel-spectrogram features used by the Phase 12b "
-                     "classifiers.")
+                     "the residual-noise floor alone carries weak class information "
+                     "relative to the full spectral content used in Phase 7b.")
         except (IndexError, KeyError):
             pass
         L.append("")
@@ -919,10 +806,6 @@ def build_report():
         "│       synthetic_corpus_summary.csv                (Phase 11)",
         "├── mapping/hull_transfer_function.{csv,png},",
         "│   transfer_loss.{csv,png}                         (Phase 12a)",
-        "├── classification/classification_results.csv,",
-        "│   classification_delta.csv,",
-        "│   classification_per_class.csv,",
-        "│   confusion_<Model>_<dataset>.png                 (Phase 12b)",
         "└── ablation/ablation_wgan_gp.{csv,png},",
         "    ablation_vae.{csv,png}                          (Ablation studies)",
         "```",

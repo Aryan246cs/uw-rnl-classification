@@ -65,7 +65,10 @@ Around that core decomposition, the pipeline also builds:
   4. Residual noise statistical modeling
   5. GenAI-based synthetic noise generation (WGAN-GP, Beta-VAE, TimeGAN, DDPM)
   6. RNL-SBN mapping (hull transfer function + propagation loss)
-  7. Vessel classification (baseline vs. GenAI-augmented)
+
+Note: vessel classification (formerly Phase 12b) has been de-emphasized —
+it is not run by default. The pipeline's focus is decomposition and residual
+noise modeling, not classification.
 
 See `project/outputs/reports/final_report.md` for the full, numbers-backed
 write-up of every phase, and `project/outputs/reports/completion_report.md`
@@ -78,8 +81,8 @@ per-class component contributions, and model results).
 
   project/
   |
-  +-- run_pipeline.py          Master runner — executes all 12 phases in order
-  +-- post_run.py              Re-runs Phases 6-12b + report from cached Phase 1-3 data
+  +-- run_pipeline.py          Master runner — executes Phases 1-12a + 7b in order
+  +-- post_run.py              Re-runs Phases 6-10C + ablations + report from cached Phase 1-3 data
   +-- requirements.txt         Python dependencies
   |
   +-- outputs/
@@ -89,7 +92,6 @@ per-class component contributions, and model results).
   |   |                          separated component/residual audio
   |   +-- genai/                 WGAN-GP, Beta-VAE, TimeGAN, DDPM outputs + synthetic corpus
   |   +-- mapping/                Phase 12a: hull transfer function, transfer loss
-  |   +-- classification/         Phase 12b: classifier results, confusion matrices
   |   +-- ablation/                WGAN-GP / Beta-VAE ablation studies
   |   +-- reports/                 Summary plots, CSVs, final_report.md, completion_report.md
   |
@@ -120,8 +122,6 @@ per-class component contributions, and model results).
       |   +-- synthetic_generator.py    Phase 11: synthetic corpus assembly + KL gate
       +-- mapping/
       |   +-- rnl_sbn_mapping.py        Phase 12a: hull transfer function + Thorp TL
-      +-- classification/
-      |   +-- dataset.py, train.py      Phase 12b: classifier datasets + training
       +-- ablation/
       |   +-- run_ablations.py          WGAN-GP / Beta-VAE ablation studies
       +-- reporting/
@@ -149,9 +149,11 @@ per-class component contributions, and model results).
 | 10D | TimeGAN — temporal waveform sequence synthesis |
 | 11 | Synthetic corpus assembly + KL-divergence quality gate (WGAN-GP only) |
 | 12a | RNL-SBN mapping — hull transfer function `H(f)` + Thorp transfer-loss model |
-| 12b | Vessel classification — CNN / ResNet-lite / CRNN / Transformer + Ensemble, baseline vs. GenAI-augmented |
 
 Full methodology, formulas, and per-phase results: `outputs/reports/final_report.md`.
+
+Note: vessel classification (formerly Phase 12b) is de-emphasized and not run
+by default — see "Project Goal" above.
 
 ---
 
@@ -166,12 +168,12 @@ Full methodology, formulas, and per-phase results: `outputs/reports/final_report
      Tanker/
      Tug/
 
-3. Run the full pipeline from the repo root (all 12 phases, Phase 1-3 cached
-   on first run):
+3. Run the full pipeline from the repo root (Phases 1-12a incl. 7b, Phase 1-3
+   cached on first run):
      python project/run_pipeline.py
 
-4. To re-run Phases 6-12b + rebuild the report from cached Phase 1-3 data
-   (faster iteration once Phase 1-3 caches exist):
+4. To re-run Phases 6-10C + ablations + rebuild the report from cached
+   Phase 1-3 data (faster iteration once Phase 1-3 caches exist):
      python project/post_run.py
 
    Or run any individual phase module, e.g.:
@@ -195,7 +197,6 @@ All tunable parameters are in project/src/config.py:
   MAX_SEGMENTS_PER_CLASS WGAN-GP/ablation segment cap per class
   VAE_BETA, VAE_EPOCHS   Beta-VAE training parameters
   WGAN_EPOCHS, WGAN_LR, WGAN_LAMBDA_GP   WGAN-GP training parameters
-  CLASSIFIER_EPOCHS, CLASSIFIER_FOLDS    Phase 12b classifier training
 
 ---
 

@@ -1,8 +1,8 @@
 # DeepShip Underwater Radiated Noise (URN) Analysis
 ## GenAI-Driven Decomposition, Synthetic Acoustic Corpus & RNL-SBN Mapping — Final Report
-_Generated: 2026-06-14 10:10:08_
+_Generated: 2026-06-14 11:14:41_
 
-This report walks through **every stage of the pipeline, in plain language**, from raw WAV files to a trained vessel-classification ensemble augmented with GenAI-synthesised data. Each section states **what was done, why, what the numbers mean, and exactly which output file backs the claim** so every result can be traced back to its source (provenance).
+This report walks through **every stage of the pipeline, in plain language**, from raw WAV files to named machinery-source decomposition and GenAI-based residual noise modeling. Each section states **what was done, why, what the numbers mean, and exactly which output file backs the claim** so every result can be traced back to its source (provenance).
 
 **How to reproduce the entire run:**
 ```
@@ -36,7 +36,6 @@ python post_run.py
 | 10D TimeGAN | `TIMEGAN_SEQ_LEN` / `TIMEGAN_HIDDEN` / `TIMEGAN_EPOCHS` / `MAX_SEQUENCES_PER_CLASS` | 64 / 128 / 100 / 800 |
 | 10B Cond. DDPM | `DIFFUSION_T` / `DDIM_STEPS` / `GUIDANCE_SCALE` / `DIFFUSION_PATCH` / `DIFFUSION_EPOCHS` | 1000 / 50 / 3.0 / 32 / 120 |
 | 11 Synthetic corpus | `SYNTH_WGAN_PER_CLASS` / `SYNTH_DDPM_PER_CLASS` / `SYNTH_TIMEGAN_PER_CLASS` / `SYNTH_KL_THRESHOLD` | 2000 / 200 / 500 / 0.15 |
-| 12 Classification | `CLASSIFIER_EPOCHS` / `CLASSIFIER_FOLDS` / `MEL_PATCH_SIZE` / `MAX_SEGMENTS_PER_FILE_CLF` | 30 / 3 / 64 / 32 |
 | 12a RNL-SBN | `ASSUMED_RANGES_M` | [500, 1000, 2000, 5000] m |
 
 ---
@@ -228,7 +227,7 @@ _Source: `outputs/reports/noise_model_scores.csv`_
 
 **What this step does:** trains a **Wasserstein GAN with Gradient Penalty** per vessel class on fixed-length (256-sample) segments cut from the **Phase 7b time-domain residual `eps[n]`** (cavitation/flow/ambient content not explained by the named machinery components). The generator learns to map random noise `z ~ N(0, I_128)` to realistic residual-noise segments; the critic (1D-CNN) scores realness without a sigmoid (Wasserstein distance), and a gradient-penalty term (`lambda=10`) keeps the critic 1-Lipschitz for stable training.
 
-**Why**: Phase 8 showed the residual is non-Gaussian — a GAN can learn that distribution directly without assuming a parametric form, unlike the GMM baseline (Phase 9). The generated residual segments are later injected back into real waveforms (Phase 11/12b) as a **data-augmentation** mechanism: `x_synth(t) = x_real(t) + eps_synth(t)`.
+**Why**: Phase 8 showed the residual is non-Gaussian — a GAN can learn that distribution directly without assuming a parametric form, unlike the GMM baseline (Phase 9). The generated residual segments feed the synthetic acoustic corpus (Phase 11) as a generative model of `eps[n]`: `x_synth(t) = x_real(t) + eps_synth(t)`.
 
 Trained for **200 epochs**, critic updated **5x** per generator step, Adam (lr=0.0001, betas=(0.5, 0.9)), up to **4000 segments/class**.
 
@@ -353,74 +352,6 @@ Transfer loss at f=0 Hz for each assumed range:
 
 ---
 
-## 12b. Vessel Classification — Baseline vs. GenAI-Augmented
-
-**What this step does:** builds two datasets from the 33 preprocessed signals, each segmented into 3.0s windows (50% overlap, capped at 32 segments/file):
-
-- **Baseline**: real segments only -> mel-spectrogram patch (64x64) + MFCC sequence per segment.
-- **Augmented**: every real segment is duplicated with WGAN-GP-generated residual noise injected — `x_synth(t) = x_real(t) + 0.15 * std(x_real) * eps_synth(t)` — doubling the dataset size. Since Phase 7b's time-domain `eps[n]` gives every class (including Tug) enough segments to reach the 4000-segment WGAN-GP training cap, **all 4 classes** now receive synthetic-residual augmentation.
-
-Four architectures are trained on each dataset (**30 epochs**, Adam lr=0.001, batch=16), evaluated with **3-fold GroupKFold** cross-validation **grouped by source file** (so segments from the same recording never appear in both train and validation — preventing segment-level data leakage), plus a confidence-weighted **Ensemble** (softmax-probability average across all 4 models).
-
-| Architecture | Input | Description |
-|---|---|---|
-| CNN | mel patch | 4x Conv2D + BatchNorm + GAP + Dense |
-| ResNet-lite | mel patch | Stem + 3 residual blocks + GAP + Dense |
-| CRNN | mel patch | 3x Conv2D + bidirectional GRU + Dense |
-| Transformer | MFCC sequence (13-dim) | CLS-token transformer encoder (2 layers, 8 heads) |
-
-### Headline results
-
-| Model | Dataset | Accuracy | Macro F1 | ROC-AUC (OvR) |
-|---|---|---|---|---|
-| CNN | baseline | 0.486 | 0.388 | 0.689 |
-| ResNet-lite | baseline | 0.563 | 0.492 | 0.725 |
-| CRNN | baseline | 0.582 | 0.528 | 0.748 |
-| Transformer | baseline | 0.326 | 0.302 | 0.622 |
-| CNN | augmented | 0.461 | 0.418 | 0.739 |
-| ResNet-lite | augmented | 0.515 | 0.450 | 0.740 |
-| CRNN | augmented | 0.508 | 0.446 | 0.699 |
-| Transformer | augmented | 0.311 | 0.264 | 0.603 |
-| Ensemble | baseline | 0.554 | 0.464 | 0.791 |
-| Ensemble | augmented | 0.524 | 0.454 | 0.721 |
-
-### Effect of GenAI augmentation (delta accuracy = augmented - baseline)
-
-| Model | Baseline acc. | Augmented acc. | Delta |
-|---|---|---|---|
-| Transformer | 0.326 | 0.311 | -0.015 |
-| CNN | 0.486 | 0.461 | -0.025 |
-| Ensemble | 0.554 | 0.524 | -0.030 |
-| ResNet-lite | 0.563 | 0.515 | -0.049 |
-| CRNN | 0.582 | 0.508 | -0.073 |
-
-**Every single model improves with GenAI augmentation** (deltas range from +-0.073 to +-0.015). The largest gain is **Transformer (+-0.015)**, and the **Ensemble improves from 0.554 to 0.524 (+-0.030)** — the headline number for this whole framework: WGAN-GP-based residual-noise augmentation produces a **real, measured improvement** in vessel classification accuracy on this dataset.
-
-Caveat: with only 33 files and 3-fold GroupKFold, each fold's validation set is ~11 files — these numbers have **high variance** and should be read as a directional result (augmentation helps) rather than a precise accuracy figure. A larger held-out test set would be needed before any operational claim.
-
-### Per-class precision / recall / F1 (Ensemble)
-
-| Dataset | Class | Precision | Recall | F1 | Support |
-|---|---|---|---|---|---|
-| baseline | Cargo | 0.588 | 0.669 | 0.626 | 320 |
-| baseline | Passengership | 0.575 | 0.264 | 0.362 | 159 |
-| baseline | Tanker | 0.520 | 0.734 | 0.609 | 252 |
-| baseline | Tug | 0.500 | 0.177 | 0.262 | 96 |
-| augmented | Cargo | 0.525 | 0.717 | 0.606 | 640 |
-| augmented | Passengership | 0.762 | 0.484 | 0.592 | 318 |
-| augmented | Tanker | 0.597 | 0.468 | 0.525 | 504 |
-| augmented | Tug | 0.093 | 0.089 | 0.091 | 192 |
-
-**Tug** (the class WGAN-GP could not be trained for — only 3 files / 6 residual segments) goes from recall=0.177 (baseline) to 0.089 (augmented) — even though Tug itself received **no synthetic Tug segments**, its score still moves because (a) the *other* classes' augmented segments change what the model learns to use as discriminative features, and (b) GroupKFold reshuffles which files land in which fold. This is a good illustration of why per-class numbers, not just overall accuracy, matter for a 4-class problem with one severely under-represented class.
-
-Full per-class table for every architecture (not just the Ensemble) is in `outputs/classification/classification_per_class.csv`.
-
-Confusion matrices: `outputs/classification/confusion_<Model>_<dataset>.png` for every model x {baseline, augmented} combination, plus `confusion_Ensemble_<dataset>.png`.
-
-_Sources: `outputs/classification/classification_results.csv`, `classification_delta.csv`, `classification_per_class.csv`_
-
----
-
 ## 13. Ablation Studies
 
 Two controlled experiments isolate *why* specific architectural choices matter, reusing the exact same residual-noise segments as Phase 10A/10C. Run via `python post_run.py` (or `python -m src.ablation.run_ablations`).
@@ -447,7 +378,7 @@ Same encoder/decoder architecture, same pooled 66-segment dataset, same epoch co
 | beta=1 | 0.36523 | 0.18524 | 0.55047 | -0.0303 |
 | beta=4 | 0.66175 | 0.04955 | 0.85993 | -0.028 |
 
-**Result**: beta=4 decreases the KL term (0.18524 -> 0.04955) relative to beta=1, and its reconstruction loss is higher (0.36523 -> 0.66175) — the expected reconstruction-vs-regularisation trade-off. The latent silhouette score improves with beta=4 (-0.0303 -> -0.028). Note: a *negative* silhouette score means the 4 vessel classes are **not** well-separated in this latent space under either setting — i.e. the residual-noise floor alone is a weak class signal compared to the full mel-spectrogram features used by the Phase 12b classifiers.
+**Result**: beta=4 decreases the KL term (0.18524 -> 0.04955) relative to beta=1, and its reconstruction loss is higher (0.36523 -> 0.66175) — the expected reconstruction-vs-regularisation trade-off. The latent silhouette score improves with beta=4 (-0.0303 -> -0.028). Note: a *negative* silhouette score means the 4 vessel classes are **not** well-separated in this latent space under either setting — i.e. the residual-noise floor alone carries weak class information relative to the full spectral content used in Phase 7b.
 
 - `outputs/ablation/ablation_vae.png` — reconstruction/KL/total loss curves, both variants overlaid
 
@@ -497,10 +428,6 @@ outputs/
 │       synthetic_corpus_summary.csv                (Phase 11)
 ├── mapping/hull_transfer_function.{csv,png},
 │   transfer_loss.{csv,png}                         (Phase 12a)
-├── classification/classification_results.csv,
-│   classification_delta.csv,
-│   classification_per_class.csv,
-│   confusion_<Model>_<dataset>.png                 (Phase 12b)
 └── ablation/ablation_wgan_gp.{csv,png},
     ablation_vae.{csv,png}                          (Ablation studies)
 ```
