@@ -103,11 +103,6 @@ def run_source_estimation(spectral_results: dict):
 
 
 if __name__ == "__main__":
-    from src.preprocessing.loader import inventory_dataset
-    from src.preprocessing.preprocess import run_preprocessing
-    from src.spectral.spectral_analysis import run_spectral_analysis
+    from src.bootstrap import get_spectral
 
-    df_inv = inventory_dataset()
-    prep = run_preprocessing(df_inv)
-    spec = run_spectral_analysis(prep)
-    run_source_estimation(spec)
+    run_source_estimation(get_spectral())

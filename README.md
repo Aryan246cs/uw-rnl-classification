@@ -47,15 +47,30 @@ pipeline.
 
 This is NOT a simple classification project.
 
-The objective is to progressively analyze underwater ship-radiated noise recordings
-and build toward:
+**Core deliverable**: given a hydrophone recording, decompose it into named
+ship-machinery noise components — engine/propeller, generator, pumps &
+compressors, gearbox, hull/high-frequency machinery — plus a residual
+(cavitation, flow, ambient ocean noise), with a quantified energy contribution
+per component:
 
-  1. Signal understanding
-  2. Feature extraction
-  3. Machinery signature analysis
-  4. Source decomposition
-  5. Residual noise modeling
-  6. Synthetic noise generation
+```
+x[n] = Sum_i m_i[n] + eps[n]
+```
+
+Around that core decomposition, the pipeline also builds:
+
+  1. Signal understanding & feature extraction
+  2. Machinery signature / harmonic analysis
+  3. Per-file source decomposition (the core deliverable, Phase 7b)
+  4. Residual noise statistical modeling
+  5. GenAI-based synthetic noise generation (WGAN-GP, Beta-VAE, TimeGAN, DDPM)
+  6. RNL-SBN mapping (hull transfer function + propagation loss)
+  7. Vessel classification (baseline vs. GenAI-augmented)
+
+See `project/outputs/reports/final_report.md` for the full, numbers-backed
+write-up of every phase, and `project/outputs/reports/completion_report.md`
+for a short, results-focused summary (problem statement, methodology,
+per-class component contributions, and model results).
 
 ---
 
@@ -63,23 +78,24 @@ and build toward:
 
   project/
   |
-  +-- run_pipeline.py          Master runner — executes all 11 phases in order
+  +-- run_pipeline.py          Master runner — executes all 12 phases in order
+  +-- post_run.py              Re-runs Phases 6-12b + report from cached Phase 1-3 data
   +-- requirements.txt         Python dependencies
   |
-  +-- data/                    (reserved for any additional data files)
-  +-- notebooks/               (reserved for Jupyter exploration)
-  +-- docs/                    (reserved for extended documentation)
-  |
   +-- outputs/
-  |   +-- waveforms/           Before/after preprocessing plots
-  |   +-- fft/                 FFT and STFT plots per file
-  |   +-- psd/                 PSD (Welch) plots per file
-  |   +-- spectrograms/        Mel spectrogram PNG files
-  |   +-- features/            inventory.csv, features.csv
-  |   +-- reports/             Summary plots and CSV reports
+  |   +-- waveforms/, fft/, psd/, spectrograms/   Per-file plots (Phases 2-3)
+  |   +-- features/             inventory.csv, features.csv (Phases 1, 4)
+  |   +-- decomposition/         Phase 7b: per-file decomposition CSVs, plots,
+  |   |                          separated component/residual audio
+  |   +-- genai/                 WGAN-GP, Beta-VAE, TimeGAN, DDPM outputs + synthetic corpus
+  |   +-- mapping/                Phase 12a: hull transfer function, transfer loss
+  |   +-- classification/         Phase 12b: classifier results, confusion matrices
+  |   +-- ablation/                WGAN-GP / Beta-VAE ablation studies
+  |   +-- reports/                 Summary plots, CSVs, final_report.md, completion_report.md
   |
   +-- src/
       +-- config.py            Central config (paths, parameters)
+      +-- bootstrap.py / cache.py   Cached Phase 1-3 loading for post_run.py
       +-- preprocessing/
       |   +-- loader.py        Phase 1: WAV loading, metadata inventory
       |   +-- preprocess.py    Phase 2: DC removal, normalization, bandpass
@@ -89,104 +105,53 @@ and build toward:
       |   +-- feature_extraction.py  Phase 4: all features -> features.csv
       +-- signatures/
       |   +-- signature_discovery.py   Phase 5: avg FFT/PSD per class
-      |   +-- machinery_signatures.py  Phase 6: harmonic peak detection
+      |   +-- machinery_signatures.py  Phase 6: harmonic peak detection + category label
       +-- decomposition/
-      |   +-- source_estimation.py     Phase 7: NMF source decomposition
+      |   +-- source_estimation.py     Phase 7: global PSD-domain NMF (feeds Phase 12a)
+      |   +-- machinery_decomposition.py  Phase 7b: per-file named source decomposition
       |   +-- residual_analysis.py     Phase 8: residual noise statistics
       +-- modeling/
-          +-- noise_modeling.py        Phase 9: GMM + alpha-stable fit
-          +-- gan_model.py             Phase 10: GAN synthetic noise
-          +-- validation.py            Phase 11: MSE, KL, JS divergence
+      |   +-- noise_modeling.py        Phase 9: GMM + alpha-stable fit
+      +-- genai/
+      |   +-- wgan_gp.py                Phase 10A: WGAN-GP residual generator
+      |   +-- vae_latent.py             Phase 10C: Beta-VAE latent representation
+      |   +-- timegan.py                Phase 10D: TimeGAN sequence synthesis
+      |   +-- ddpm_separator.py         Phase 10B: conditional DDPM spectrogram patches
+      |   +-- synthetic_generator.py    Phase 11: synthetic corpus assembly + KL gate
+      +-- mapping/
+      |   +-- rnl_sbn_mapping.py        Phase 12a: hull transfer function + Thorp TL
+      +-- classification/
+      |   +-- dataset.py, train.py      Phase 12b: classifier datasets + training
+      +-- ablation/
+      |   +-- run_ablations.py          WGAN-GP / Beta-VAE ablation studies
+      +-- reporting/
+          +-- generate_report.py        Builds outputs/reports/final_report.md
 
 ---
 
-## Pipeline Phases
+## Pipeline Phases (summary)
 
-### Phase 1 – Signal Loading
-Scans all class folders for WAV files. Extracts filename, class, duration,
-sample rate, and number of samples. Saves results to:
-  outputs/features/inventory.csv
+| Phase | Description |
+|---|---|
+| 1 | Signal inventory — `outputs/features/inventory.csv` |
+| 2 | Preprocessing — DC removal, normalization, 10-1000 Hz Butterworth bandpass |
+| 3 | Spectral analysis — FFT, STFT/mel spectrogram, Welch PSD |
+| 4 | Feature extraction — 65-column feature table |
+| 5 | Signature discovery — per-class average FFT/PSD comparison |
+| 6 | Machinery signature exploration — harmonic-series detection + Appendix B frequency-band label |
+| 7 | Global PSD-domain NMF (3 components) — feeds Phase 12a |
+| **7b** | **Per-file machinery source decomposition (core deliverable)** — STFT-NMF (R=6) + Wiener masking + Appendix B labelling -> named components + residual `eps[n]` |
+| 8 | Residual noise analysis (KS, Shapiro-Wilk, kurtosis/skewness) on `eps[n]` |
+| 9 | GMM (2/3/5 components, BIC-selected) + alpha-stable baseline fit on `eps[n]` |
+| 10A | WGAN-GP — learns `eps[n]` distribution per class for data augmentation |
+| 10B | Conditional DDPM — class-conditioned spectrogram-patch synthesis |
+| 10C | Beta-VAE — latent representation of residual segments |
+| 10D | TimeGAN — temporal waveform sequence synthesis |
+| 11 | Synthetic corpus assembly + KL-divergence quality gate (WGAN-GP only) |
+| 12a | RNL-SBN mapping — hull transfer function `H(f)` + Thorp transfer-loss model |
+| 12b | Vessel classification — CNN / ResNet-lite / CRNN / Transformer + Ensemble, baseline vs. GenAI-augmented |
 
-### Phase 2 – Preprocessing
-For every signal:
-  - DC offset removal (subtract mean)
-  - Amplitude normalization (peak normalization)
-  - Bandpass filter (default: 10 Hz – 1000 Hz, Butterworth order 4)
-  - Before/after waveform comparison plots saved to outputs/waveforms/
-
-### Phase 3 – Spectral Analysis
-For every preprocessed signal:
-  - FFT via numpy.fft.rfft() with Hanning window
-    -> Dominant frequencies and peak magnitudes extracted
-  - STFT via librosa.stft()
-  - Mel Spectrogram via librosa.feature.melspectrogram()
-  - PSD via scipy.signal.welch()
-  All plots saved as PNG files under outputs/fft/, outputs/spectrograms/, outputs/psd/
-
-### Phase 4 – Feature Extraction
-Extracts a comprehensive feature vector per signal:
-  - Spectral: centroid, bandwidth, roll-off, flatness, top peak frequencies
-  - Harmonic: fundamental frequency (f0), voiced ratio, 2f/3f/4f estimates
-  - Energy: RMS, band energy (4 bands), PSD peak frequencies and magnitudes
-  - Statistical: mean, variance, std, kurtosis, skewness
-  - MFCC: 13 coefficients (mean + std each)
-Saved to: outputs/features/features.csv
-
-### Phase 5 – Signature Discovery
-Groups signals by vessel class and computes element-wise average FFT and PSD.
-Generates:
-  - Per-class overlay comparison (all 4 classes on one plot)
-  - 2x2 grid of individual class PSD profiles
-Saved to: outputs/reports/
-
-### Phase 6 – Machinery Signature Exploration
-Research-oriented. Does NOT hardcode any conclusions.
-Sweeps candidate fundamental frequencies and scores how many harmonics (up to 6)
-align with PSD peaks. Outputs a ranked list of candidate machinery frequencies
-per file to: outputs/reports/machinery_signatures.csv
-
-### Phase 7 – Source Contribution Estimation
-Models each signal's PSD as:
-  RNL = w1*M1 + w2*M2 + w3*M3 + e
-where M are latent source components and e is residual noise.
-Uses Non-Negative Matrix Factorization (NMF) to decompose the PSD matrix.
-  - Component spectra saved as plots
-  - Per-file source weights saved to: outputs/reports/nmf_weights.csv
-  - Residual signals passed forward to Phase 8
-
-### Phase 8 – Residual Noise Analysis
-Analyzes each residual signal for noise character:
-  - Kolmogorov-Smirnov test vs. normal distribution
-  - Shapiro-Wilk test
-  - Kurtosis and skewness
-  - Classification: Gaussian / Near-Gaussian / Non-Gaussian / Heavy-tailed
-Saved to: outputs/reports/residual_analysis.csv
-Histogram plots saved to: outputs/reports/residuals/
-
-### Phase 9 – Noise Modeling
-Fits Gaussian Mixture Models (GMM) to each residual distribution using 2, 3,
-and 5 components. Selects best fit by BIC. Also attempts alpha-stable distribution
-fit via scipy.stats.levy_stable where available.
-  - Model comparison scores saved to: outputs/reports/noise_model_scores.csv
-  - Fitted distribution plots saved to: outputs/reports/noise_models/
-
-### Phase 10 – GAN-Based Synthetic Noise Generation
-A modular Dense GAN trained on fixed-length residual noise segments:
-  - Generator: 4-layer dense network, Tanh output
-  - Discriminator: 3-layer dense network, Sigmoid output
-  - Input: random Gaussian noise (z_dim=64)
-  - Output: synthetic noise segments of length 256
-Training loss curves saved. Synthetic samples saved as .npy file.
-Note: GAN only trains if enough residual segments exist.
-
-### Phase 11 – Validation
-Compares real residual noise vs. GAN-generated samples:
-  - MSE (Mean Squared Error)
-  - KL Divergence
-  - JS Divergence
-  - Distribution histogram overlay
-  - Q-Q plot
-Saved to: outputs/reports/validation_metrics.csv and outputs/reports/validation/
+Full methodology, formulas, and per-phase results: `outputs/reports/final_report.md`.
 
 ---
 
@@ -201,13 +166,18 @@ Saved to: outputs/reports/validation_metrics.csv and outputs/reports/validation/
      Tanker/
      Tug/
 
-3. Run the full pipeline from the repo root:
+3. Run the full pipeline from the repo root (all 12 phases, Phase 1-3 cached
+   on first run):
      python project/run_pipeline.py
 
-   Or run any individual phase module, e.g.:
-     python -m src.spectral.spectral_analysis   (from inside project/)
+4. To re-run Phases 6-12b + rebuild the report from cached Phase 1-3 data
+   (faster iteration once Phase 1-3 caches exist):
+     python project/post_run.py
 
-4. Generate the final Markdown report:
+   Or run any individual phase module, e.g.:
+     python -m src.decomposition.machinery_decomposition   (from inside project/)
+
+5. Generate the final Markdown report on its own:
      python -m src.reporting.generate_report    (from inside project/)
 
 ---
@@ -216,14 +186,16 @@ Saved to: outputs/reports/validation_metrics.csv and outputs/reports/validation/
 
 All tunable parameters are in project/src/config.py:
 
-  TARGET_SR        Sample rate (None = keep native)
-  BANDPASS_LOW     Bandpass filter low cutoff (Hz)
-  BANDPASS_HIGH    Bandpass filter high cutoff (Hz)
-  N_FFT            FFT window size
-  HOP_LEN          STFT hop length
-  N_MELS           Number of mel bands
-  WELCH_NPERSEG    Welch PSD segment length
-  N_MFCC           Number of MFCC coefficients
+  TARGET_SR              Sample rate (None = keep native)
+  BANDPASS_LOW/HIGH      Bandpass filter cutoffs (Hz)
+  N_FFT / HOP_LEN        STFT parameters
+  N_MELS                 Number of mel bands
+  WELCH_NPERSEG          Welch PSD segment length
+  N_MFCC                 Number of MFCC coefficients
+  MAX_SEGMENTS_PER_CLASS WGAN-GP/ablation segment cap per class
+  VAE_BETA, VAE_EPOCHS   Beta-VAE training parameters
+  WGAN_EPOCHS, WGAN_LR, WGAN_LAMBDA_GP   WGAN-GP training parameters
+  CLASSIFIER_EPOCHS, CLASSIFIER_FOLDS    Phase 12b classifier training
 
 ---
 

@@ -89,7 +89,7 @@ def energy_features(signal: np.ndarray, sr: int, psd_freqs, psd) -> dict:
     for lo, hi in bands:
         mask = (psd_freqs >= lo) & (psd_freqs < hi)
         feats[f"band_energy_{lo}_{hi}Hz"] = (
-            float(np.trapz(psd[mask], psd_freqs[mask])) if mask.any() else 0.0
+            float(np.trapezoid(psd[mask], psd_freqs[mask])) if mask.any() else 0.0
         )
     # PSD peaks
     from scipy.signal import find_peaks
@@ -167,11 +167,6 @@ def run_feature_extraction(spectral_results: dict) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    from src.preprocessing.loader import inventory_dataset
-    from src.preprocessing.preprocess import run_preprocessing
-    from src.spectral.spectral_analysis import run_spectral_analysis
+    from src.bootstrap import get_spectral
 
-    df_inv = inventory_dataset()
-    prep = run_preprocessing(df_inv)
-    spec = run_spectral_analysis(prep)
-    run_feature_extraction(spec)
+    run_feature_extraction(get_spectral())

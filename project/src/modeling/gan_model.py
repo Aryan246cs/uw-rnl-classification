@@ -186,13 +186,8 @@ def run_gan_pipeline(residuals: dict):
 
 
 if __name__ == "__main__":
-    from src.preprocessing.loader import inventory_dataset
-    from src.preprocessing.preprocess import run_preprocessing
-    from src.spectral.spectral_analysis import run_spectral_analysis
+    from src.bootstrap import get_spectral
     from src.decomposition.source_estimation import run_source_estimation
 
-    df_inv = inventory_dataset()
-    prep = run_preprocessing(df_inv)
-    spec = run_spectral_analysis(prep)
-    res, _, _ = run_source_estimation(spec)
+    res, _, _ = run_source_estimation(get_spectral())
     run_gan_pipeline(res)

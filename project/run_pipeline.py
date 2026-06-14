@@ -1,6 +1,7 @@
 """
 DeepShip Research Pipeline – Master Runner
-Executes all 11 phases in order.
+Executes all 12 phases (Phases 1-9 classical/statistical pipeline,
+Phases 10A-12b GenAI modelling, RNL-SBN mapping and classification) in order.
 """
 
 import sys
@@ -16,10 +17,18 @@ from src.features.feature_extraction import run_feature_extraction
 from src.signatures.signature_discovery import run_signature_discovery
 from src.signatures.machinery_signatures import run_machinery_analysis
 from src.decomposition.source_estimation import run_source_estimation
+from src.decomposition.machinery_decomposition import run_machinery_decomposition
 from src.decomposition.residual_analysis import run_residual_analysis
 from src.modeling.noise_modeling import run_noise_modeling
-from src.modeling.gan_model import run_gan_pipeline
-from src.modeling.validation import run_validation
+from src.genai.wgan_gp import run_wgan_gp
+from src.genai.vae_latent import run_vae
+from src.genai.timegan import run_timegan
+from src.genai.ddpm_separator import run_ddpm
+from src.genai.synthetic_generator import run_synthetic_generation
+from src.mapping.rnl_sbn_mapping import run_rnl_sbn_mapping
+from src.classification.dataset import build_dataset
+from src.classification.train import run_classification
+from src.reporting.generate_report import build_report
 
 
 def main():
@@ -33,11 +42,24 @@ def main():
 
     # Phase 2 – Preprocess
     print("\n[Phase 2] Preprocessing")
-    preprocessed = run_preprocessing(df_inv, apply_bandpass=True)
+    from src.cache import (
+        load_preprocessed,
+        save_preprocessed,
+        load_spectral,
+        save_spectral,
+    )
+
+    preprocessed = load_preprocessed()
+    if preprocessed is None:
+        preprocessed = run_preprocessing(df_inv, apply_bandpass=True)
+        save_preprocessed(preprocessed)
 
     # Phase 3 – Spectral
     print("\n[Phase 3] Spectral Analysis (FFT / STFT / Spectrogram / PSD)")
-    spectral = run_spectral_analysis(preprocessed)
+    spectral = load_spectral()
+    if spectral is None:
+        spectral = run_spectral_analysis(preprocessed)
+        save_spectral(spectral)
 
     # Phase 4 – Features
     print("\n[Phase 4] Feature Extraction")
@@ -51,25 +73,62 @@ def main():
     print("\n[Phase 6] Machinery Signature Exploration")
     mach_df = run_machinery_analysis(spectral)
 
-    # Phase 7 – Decomposition
+    # Phase 7 – Decomposition (global PSD-domain NMF, feeds Phase 12a SBN estimate)
     print("\n[Phase 7] Source Contribution Estimation (NMF)")
-    residuals, W, H = run_source_estimation(spectral)
+    _, W, H = run_source_estimation(spectral)
+
+    # Phase 7b – Named machinery source decomposition (per-file STFT NMF +
+    # Wiener masking + Appendix B labelling). Produces the time-domain
+    # residual eps[n] = x[n] - x_hat[n] that feeds Phases 8-10A below.
+    print("\n[Phase 7b] Machinery Source Decomposition (named components)")
+    time_residuals, decomp_df, decomp_summary = run_machinery_decomposition(preprocessed)
+
+    # Down-sample the full-length time-domain residuals for the statistical
+    # tests in Phases 8/9 (KS/Shapiro/GMM are intractable at ~6M samples/file);
+    # Phase 10A (WGAN-GP) uses the full-length residuals for more segments.
+    stat_residuals = {k: v[::100] for k, v in time_residuals.items()}
 
     # Phase 8 – Residual analysis
     print("\n[Phase 8] Residual Noise Analysis")
-    res_df = run_residual_analysis(residuals)
+    res_df = run_residual_analysis(stat_residuals)
 
-    # Phase 9 – Noise modeling
-    print("\n[Phase 9] Noise Modeling (GMM)")
-    noise_df = run_noise_modeling(residuals)
+    # Phase 9 – Noise modeling (GMM baseline)
+    print("\n[Phase 9] Residual Noise Modeling (GMM baseline)")
+    noise_df = run_noise_modeling(stat_residuals)
 
-    # Phase 10 – GAN
-    print("\n[Phase 10] GAN Training")
-    G, synthetic = run_gan_pipeline(residuals)
+    # Phase 10A – WGAN-GP residual noise model
+    print("\n[Phase 10A] WGAN-GP Residual Noise Modelling")
+    wgan_models = run_wgan_gp(time_residuals)
 
-    # Phase 11 – Validation
-    print("\n[Phase 11] Validation")
-    val_df = run_validation(residuals, synthetic)
+    # Phase 10C – Beta-VAE latent source representation
+    print("\n[Phase 10C] Beta-VAE Latent Source Representation")
+    run_vae(time_residuals)
+
+    # Phase 10D – TimeGAN temporal sequence synthesis
+    print("\n[Phase 10D] TimeGAN Temporal Sequence Synthesis")
+    timegan_models = run_timegan(preprocessed)
+
+    # Phase 10B – Conditional DDPM spectrogram patch synthesis
+    print("\n[Phase 10B] Conditional DDPM Spectrogram Patch Synthesis")
+    ddpm_bundle = run_ddpm(preprocessed)
+
+    # Phase 11 – Synthetic acoustic corpus generation
+    print("\n[Phase 11] Synthetic Acoustic Corpus Generation")
+    run_synthetic_generation(wgan_models, ddpm_bundle, timegan_models)
+
+    # Phase 12a – RNL-SBN mapping (hull transfer function + Thorp propagation)
+    print("\n[Phase 12a] RNL-SBN Mapping")
+    run_rnl_sbn_mapping(spectral, W, H)
+
+    # Phase 12b – Vessel classification (baseline vs. GenAI-augmented)
+    print("\n[Phase 12b] Vessel Classification (baseline vs. augmented)")
+    baseline_data = build_dataset(preprocessed, augment=False)
+    augmented_data = build_dataset(preprocessed, wgan_models=wgan_models, augment=True)
+    run_classification(baseline_data, augmented_data)
+
+    # Final report
+    print("\n[Report] Building consolidated research report")
+    build_report()
 
     print("\n" + "=" * 60)
     print("Pipeline complete.")

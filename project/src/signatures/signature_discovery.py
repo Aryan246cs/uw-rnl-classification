@@ -20,6 +20,16 @@ from src.config import (
     OUTPUTS_REPORTS,
 )
 
+MAX_PLOT_POINTS = 4000  # cap to avoid matplotlib OverflowError on huge arrays
+
+
+def _downsample(x: np.ndarray, y: np.ndarray, max_pts: int = MAX_PLOT_POINTS):
+    """Thin arrays to at most max_pts evenly-spaced points."""
+    if len(x) <= max_pts:
+        return x, y
+    idx = np.linspace(0, len(x) - 1, max_pts, dtype=int)
+    return x[idx], y[idx]
+
 
 def _interp_to_common(arrays):
     """Interpolate all arrays to the length of the shortest one."""
@@ -78,13 +88,14 @@ def plot_class_comparison_fft(averages: dict):
         f = data["freqs"]
         avg = data["avg_fft"]
         std = data["std_fft"]
-        # Interpolate freqs to match avg length if needed
         f_plot = np.linspace(f[0], f[-1], len(avg))
-        ax.semilogy(f_plot, avg + 1e-12, label=cls, color=colors.get(cls), lw=1.2)
+        f_ds, avg_ds = _downsample(f_plot, avg)
+        _, std_ds = _downsample(f_plot, std)
+        ax.semilogy(f_ds, avg_ds + 1e-12, label=cls, color=colors.get(cls), lw=1.2)
         ax.fill_between(
-            f_plot,
-            np.maximum(avg - std, 1e-12),
-            avg + std,
+            f_ds,
+            np.maximum(avg_ds - std_ds, 1e-12),
+            avg_ds + std_ds,
             alpha=0.15,
             color=colors.get(cls),
         )
@@ -116,11 +127,13 @@ def plot_class_comparison_psd(averages: dict):
         avg = data["avg_psd"]
         std = data["std_psd"]
         f_plot = np.linspace(f[0], f[-1], len(avg))
-        ax.semilogy(f_plot, avg + 1e-30, label=cls, color=colors.get(cls), lw=1.2)
+        f_ds, avg_ds = _downsample(f_plot, avg)
+        _, std_ds = _downsample(f_plot, std)
+        ax.semilogy(f_ds, avg_ds + 1e-30, label=cls, color=colors.get(cls), lw=1.2)
         ax.fill_between(
-            f_plot,
-            np.maximum(avg - std, 1e-30),
-            avg + std,
+            f_ds,
+            np.maximum(avg_ds - std_ds, 1e-30),
+            avg_ds + std_ds,
             alpha=0.15,
             color=colors.get(cls),
         )
@@ -148,11 +161,13 @@ def plot_per_class_grid(averages: dict):
         f = np.linspace(
             data["psd_freqs"][0], data["psd_freqs"][-1], len(data["avg_psd"])
         )
-        axes[i].semilogy(f, data["avg_psd"] + 1e-30, lw=1.0)
+        f_ds, avg_ds = _downsample(f, data["avg_psd"])
+        _, std_ds = _downsample(f, data["std_psd"])
+        axes[i].semilogy(f_ds, avg_ds + 1e-30, lw=1.0)
         axes[i].fill_between(
-            f,
-            np.maximum(data["avg_psd"] - data["std_psd"], 1e-30),
-            data["avg_psd"] + data["std_psd"],
+            f_ds,
+            np.maximum(avg_ds - std_ds, 1e-30),
+            avg_ds + std_ds,
             alpha=0.2,
         )
         axes[i].set_title(f"{cls} – Mean PSD ± std")
@@ -175,11 +190,6 @@ def run_signature_discovery(spectral_results: dict):
 
 
 if __name__ == "__main__":
-    from src.preprocessing.loader import inventory_dataset
-    from src.preprocessing.preprocess import run_preprocessing
-    from src.spectral.spectral_analysis import run_spectral_analysis
+    from src.bootstrap import get_spectral
 
-    df_inv = inventory_dataset()
-    prep = run_preprocessing(df_inv)
-    spec = run_spectral_analysis(prep)
-    run_signature_discovery(spec)
+    run_signature_discovery(get_spectral())

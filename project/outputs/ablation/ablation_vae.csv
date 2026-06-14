@@ -1,0 +1,3 @@
+variant,final_recon_loss,final_kld,final_total_loss,latent_silhouette_by_class
+beta=1,0.36523,0.18524,0.55047,-0.0303
+beta=4,0.66175,0.04955,0.85993,-0.028

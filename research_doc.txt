@@ -1,0 +1,843 @@
+
+INDIAN NAVY — WEAPONS & ENGINEERING DEPARTMENT
+RESEARCH FRAMEWORK DOCUMENT  |  CLASSIFIED: CONFIDENTIAL
+
+
+GenAI-Driven Framework for
+Underwater Radiated Noise Decomposition,
+RNL-SBN Mapping, and Synthetic Acoustic
+Intelligence Generation
+A Comprehensive Research Architecture for Naval Acoustic Intelligence
+
+Dataset: DeepShip (Strait of Georgia, 2016-2018)
+Vessel Classes: Cargo | Passengership | Tanker | Tug
+Pipeline Phases: 12 | Framework: Generative AI + Signal Processing
+
+Version 1.0  |  June 2026
+
+Abstract
+Underwater ship-radiated noise recorded by hydrophone sensors is a composite acoustic signal comprising mechanical machinery vibrations, propeller cavitation noise, hydrodynamic flow noise, hull structural resonances, and ambient ocean noise. Accurately decomposing this mixture into individual source contributions is of critical importance for naval acoustic intelligence, submarine detection, vessel classification, and fleet signature management. This document presents a research-grade, end-to-end Generative AI framework for (i) decomposing measured Radiated Noise Level (RNL) signals into constituent Ship-Borne Noise (SBN) source components; (ii) estimating per-source contribution weights via physics-informed mixture modelling; (iii) characterising and modelling non-Gaussian residual noise using advanced generative architectures; and (iv) synthesising realistic acoustic training data to overcome data scarcity constraints inherent in naval environments. The proposed pipeline integrates classical signal processing (FFT, Welch PSD, STFT, cepstral analysis, NMF) with state-of-the-art Generative AI methods including Conditional Denoising Diffusion Probabilistic Models (DDPM), Wasserstein GANs with Gradient Penalty (WGAN-GP), Temporal GANs (TimeGAN), Variational Autoencoders (VAE), and Transformer-based attention mechanisms. The framework is validated on the DeepShip dataset comprising 47+ hours of real-world underwater recordings across four vessel classes. The ultimate operational output is a vessel classification system of demonstrably superior accuracy, providing the Indian Navy with a robust, deployable acoustic intelligence capability.
+
+Keywords: Underwater acoustics, ship-radiated noise, source decomposition, NMF, conditional diffusion model, WGAN-GP, TimeGAN, VAE, RNL-SBN mapping, naval acoustic intelligence, DeepShip, hydrophone signal processing
+
+1.  Introduction
+Modern naval operations demand precise acoustic intelligence on surface and sub-surface threats. A hydrophone deployed below a naval vessel or on the seabed records a single composite time-domain signal that encodes acoustic energy emitted by every rotating, vibrating, and cavitating component aboard the target ship. Traditional signal processing pipelines — based on Fast Fourier Transforms, simple spectral subtraction, or Independent Component Analysis — fall short of reliably isolating individual source contributions, especially under adverse sea conditions, high ambient noise, and non-stationary machinery states.
+
+The advent of Generative Artificial Intelligence presents a transformative opportunity. Unlike discriminative models that merely label or classify, generative models learn the underlying probability distributions of acoustic signals. This capability enables the framework to perform source separation in situations where no clean reference signal exists, to fill data gaps in underrepresented vessel classes, and to synthesise realistic noise environments for testing and classifier training without endangering naval assets.
+
+This document defines the complete research architecture — mathematical foundations, signal processing pipeline, generative AI module design, evaluation methodology, and implementation roadmap — for an operational acoustic intelligence system.
+
+1.1  Motivation and Operational Context
+A ship operating at sea generates noise from multiple independent sources simultaneously. The hydrophone records only the superposition:
+x(t) = Engine(t) + Generator(t) + Pump(t) + Propeller(t) + Cavitation(t) + HullVibration(t) + AmbientNoise(t)
+The key operational questions are:
+Which machinery components are present and active?
+What is the relative acoustic contribution (weight) of each component?
+What residual non-Gaussian noise remains after accounting for identified components?
+Can this residual be modelled and synthesised to augment classifier training data?
+Can a downstream classifier reliably identify vessel class and type from the decomposed signatures?
+
+1.2  Scope and Limitations
+The present framework addresses single-hydrophone (single-channel) recordings. Multi-channel beamforming extensions are noted where applicable but are reserved for future work. The physical model adopted is a linear additive mixture with frequency-dependent hull transfer function — an approximation that is well-supported by literature for moderate sea states and does not account for strong multipath arrivals. Extensions to handle severe multipath, Doppler shifts from moving targets, and classified sonar architectures are outside the immediate scope of this public research document.
+
+2.  Formal Problem Statement
+2.1  Physical Signal Model
+The physically accurate model for the measured Radiated Noise Level at the hydrophone is:
+RNL(f) = H(f) [ Σ(i=1 to N) w_i · M_i(f)  +  P(f)  +  C(f) ]  +  A(f)  +  E(f)
+
+Symbol
+Description
+Typical Frequency Range
+M_i(f)
+Individual machinery-generated acoustic signature (engine, generator, gearbox, pump, compressor)
+< 100 Hz (fundamentals) up to 1 kHz (harmonics)
+w_i
+Scalar contribution weight for machinery component i — the quantity to be estimated
+—
+P(f)
+Propeller tonal noise: Blade Passing Frequencies (BPF) and their harmonics
+50 Hz – 1 kHz
+C(f)
+Cavitation broadband noise from bubble collapse events
+1 kHz – 50 kHz
+H(f)
+Hull transfer function: acts as a frequency-selective filter (amplifies/attenuates)
+Full band (vessel-specific)
+A(f)
+Ambient ocean noise: wind-driven surface waves, rain, marine mammals, distant shipping
+< 500 Hz dominant
+E(f)
+Environmental propagation: multi-path reflections, refraction, seabed absorption
+Geometry-dependent
+
+2.2  Deficiencies of the Simplified Model
+A naive simplification RNL - SBN = w^T(M) fails on seven physical grounds:
+RNL already contains SBN: subtracting SBN from RNL does not isolate propagation effects.
+Propagation loss is ignored: the hydrophone is at distance r from the source; geometric and absorption losses are frequency-dependent.
+Cavitation is non-linear: bubble collapse produces broadband impulsive noise not captured by a linear mixture.
+Hull transfer function H(f) is vessel-specific, unknown without calibration, and varies with loading.
+Environmental effects E(f) include multipath arrivals, creating spectral interference patterns.
+Sea state modulates ambient noise A(f) dynamically (Beaufort scale dependency).
+Non-stationarity: engine RPM, vessel speed, and loading change over a recording, making w_i time-varying.
+
+2.3  Research Objectives
+Given the above, the following formal objectives are defined:
+Source Decomposition (SD): Recover estimated component signals M_i(t) from observed mixture x(t) without ground-truth individual source recordings (blind/semi-blind separation).
+Contribution Weight Estimation (CWE): Estimate scalar weights w_i representing each source's fractional contribution to total measured RNL.
+RNL-SBN Mapping (RSM): Estimate the hull transfer function H(f) and propagation model to map from measured RNL back to constituent SBN source levels.
+Residual Noise Characterisation (RNC): Characterise the distribution of the residual signal after subtracting the weighted source model.
+Generative Noise Modelling (GNM): Train generative models (WGAN-GP, Diffusion, TimeGAN) to synthesise realistic residual noise samples.
+Synthetic Data Augmentation (SDA): Produce augmented training corpora for the downstream vessel classifier.
+Vessel Classification (VC): Train and evaluate classification models on the augmented dataset to achieve state-of-the-art accuracy on the DeepShip benchmark.
+
+3.  Literature Review
+3.1  Classical Signal Processing for Underwater Acoustics
+Traditional approaches to underwater acoustic analysis rely on deterministic signal processing tools. The Fast Fourier Transform (FFT) converts the time-domain hydrophone signal to the frequency domain, exposing dominant spectral peaks corresponding to rotating machinery. The Welch Power Spectral Density (PSD) estimator improves on single-window FFT by averaging periodograms computed from overlapping segments, significantly reducing spectral variance — particularly important for broadband ship noise where signal-to-noise ratios can be as low as -5 dB.
+
+Cepstral analysis — computing the IFFT of the log power spectrum — has been widely employed for detecting harmonic families produced by rotating machinery, by transforming convolved spectral patterns into additive quefrency-domain features. The Short-Time Fourier Transform (STFT) provides the time-frequency representation necessary to track non-stationary source behaviour as vessel speed and engine load change during a recording.
+
+3.2  Blind Source Separation
+Independent Component Analysis (ICA) and its variants were among the first machine learning tools applied to underwater acoustic separation. ICA exploits statistical independence between source signals to recover them from the mixture. Key work by Mansour et al. (2006) applied ICA to passive acoustic tomography, while Zhang et al. (2011) used BSS to cancel tug interference from hydrophone recordings. A fundamental limitation of ICA is that the number of sensors must equal or exceed the number of sources — a constraint violated in most single-hydrophone deployments.
+
+Non-negative Matrix Factorisation (NMF) provides a more flexible decomposition framework, factorising the spectrogram matrix V ≈ WH into non-negative basis spectra W and time-varying activation coefficients H. This avoids the sensor count constraint and produces interpretable spectral templates. NMF has been demonstrated to recover machinery-specific spectral profiles from composite ship noise, though it requires careful initialisation and is sensitive to the number of components chosen.
+
+3.3  Deep Learning for Acoustic Separation
+The Conv-TasNet architecture (Luo & Mesgarani, 2019) established a new benchmark for single-channel audio source separation by operating directly in the time domain. Using 1D dilated convolutions to construct separation masks, Conv-TasNet surpassed ideal time-frequency masking methods. He et al. (2024) extended Conv-TasNet with parallel dilated convolution and group convolution specifically for ship-radiated noise, achieving SNR of 16.86 dB and SI-SNRi of 2.53 dB on the DeepShip dataset with a model size of only 3.67M parameters — outperforming both Res-UNet (103M) and UNet (33M).
+
+DCUNet combines deep complex networks with UNet architectures to estimate complex ratio masks in the time-frequency domain, preserving phase information. Res-UNet employs complex ideal ratio masks to address sensitivity to temporal displacement. These architectures, while originally developed for speech separation, have shown adaptability to underwater acoustic separation when retrained on domain-specific data.
+
+3.4  Generative AI Approaches
+The Generative Adversarial Network (GAN) framework, introduced by Goodfellow et al. (2014), enables learning of complex implicit distributions without a tractable likelihood. For underwater acoustics, GANs have been applied to noise distribution learning (Xiamen sea GAN study documented in the reference material), where a CNN-based discriminator combined with a dense generator achieved the lowest MSE, KL, and JS divergence scores compared to GMM and alpha-stable baselines.
+
+Wasserstein GANs with Gradient Penalty (WGAN-GP) address mode collapse and training instability by replacing the Jensen-Shannon divergence loss with the Wasserstein-1 distance, enforced via gradient penalty rather than weight clipping. This is particularly relevant for heavy-tailed, impulsive underwater noise distributions that frustrate standard GAN training.
+
+Denoising Diffusion Probabilistic Models (DDPM) have recently surpassed GANs in sample quality and distribution coverage across many domains. The forward diffusion process gradually corrupts data with Gaussian noise; the learned reverse process denoises via a neural score function. Conditional extensions (classifier-free guidance) allow source-label-conditioned generation, making them ideal for controlled acoustic source synthesis.
+
+TimeGAN (Yoon et al., 2019) combines supervised and adversarial objectives with an embedding/recovery architecture to capture temporal dynamics of sequential data, making it well-suited for time-series acoustic generation where temporal correlations are physically meaningful.
+
+3.5  DeepShip Dataset
+The DeepShip dataset, assembled by Northwestern Polytechnical University, provides 47 hours and 4 minutes of real-world underwater recordings from 265 different ships across four vessel classes (Cargo, Passengership, Tanker, Tug), captured at the Strait of Georgia delta node between May 2016 and October 2018. It captures diverse seasonal conditions, ambient marine mammal noise, and varying sea states, making it the most comprehensive publicly available benchmark for underwater vessel acoustic analysis. All generative and classification results in this framework are validated against DeepShip.
+
+4.  Mathematical Framework
+4.1  Signal Model and Mixture Formulation
+Let x(t) ∈ R be the single-channel hydrophone recording sampled at frequency F_s. The discrete-time model is:
+x[n] = Σ(i=1 to N) w_i · m_i[n]  +  ε[n],    n = 0, 1, ..., L-1
+where m_i[n] are latent source signals, w_i ∈ R^+ are non-negative contribution weights, and ε[n] is the residual noise process. In the frequency domain under the short-time Fourier transform:
+X(k, τ) = Σ(i=1 to N) w_i · M_i(k, τ)  +  E(k, τ)
+where k indexes frequency bins and τ indexes time frames.
+
+4.2  Welch PSD Decomposition
+Given K overlapping segments of length L_seg with hop size H, the Welch PSD estimate is:
+S_xx(k) = (1/K) Σ(j=0 to K-1) |X_j(k)|²  /  ( F_s · Σ w²[n] )
+The NMF decomposition on the PSD matrix S ∈ R^(F×T) is:
+S ≈ W · H,    W ∈ R^(F×R)_≥0,    H ∈ R^(R×T)_≥0
+where R is the number of latent components. The update rules (multiplicative Lee-Seung) are:
+W ← W ⊙ [(S / WH) · H^T] / [1_F · H^T]
+H ← H ⊙ [W^T · (S / WH)] / [W^T · 1_F]
+
+4.3  Source Contribution Estimation
+Given recovered component spectral templates W[:,r], the contribution weight for source i at frame τ is estimated by solving a non-negative least squares (NNLS) problem:
+w* = argmin_w  ||S[:,τ] - W·w||²_2    subject to  w ≥ 0
+The time-averaged weights then give scalar RNL contributions. The hull transfer function H(f) is estimated in the frequency domain via:
+H(f) = S_yx(f) / S_xx(f)
+where S_yx is the cross-PSD between measured RNL and estimated SBN component sum.
+
+4.4  Residual Noise Model
+After subtracting the weighted source model, the residual is:
+ε[n] = x[n]  -  Σ(i=1 to N) w_i* · m_i[n]
+The residual is characterised by its probability density function p_ε. Statistical tests (Kolmogorov-Smirnov, Shapiro-Wilk) determine whether p_ε departs significantly from Gaussianity. Key diagnostics are excess kurtosis κ_4 and skewness γ_1:
+κ_4 = E[(ε - μ)^4] / σ^4  -  3,    γ_1 = E[(ε - μ)^3] / σ^3
+For κ_4 >> 0 (leptokurtic), an alpha-stable distribution S(α, β, γ, δ) with characteristic exponent α ∈ (0,2] is fitted as an intermediate baseline before WGAN-GP modelling.
+
+4.5  Diffusion Model Score Function
+The conditional denoising diffusion model parameterises the score function of the source signal posterior. Forward process:
+q(x_t | x_{t-1}) = N(x_t ; √(1-β_t) · x_{t-1},  β_t · I)
+Reverse learned denoising process:
+p_θ(x_{t-1} | x_t, c) = N(x_{t-1} ; μ_θ(x_t, t, c),  Σ_θ(x_t, t, c))
+where c is the conditioning vector (source label, vessel class, operational state). The score network ε_θ is trained by minimising:
+L_diffusion = E_{t,x_0,ε} [ ||ε  -  ε_θ(√ᾱ_t · x_0 + √(1-ᾱ_t) · ε,  t,  c)||² ]
+
+4.6  WGAN-GP Objective
+The Wasserstein-1 distance between real residual distribution p_r and generated distribution p_g is estimated via:
+W(p_r, p_g) = max_{||f||_L ≤ 1} E_{x~p_r}[f(x)]  -  E_{z~p_z}[f(G(z))]
+With gradient penalty λ_GP to enforce the 1-Lipschitz constraint:
+L_D = E_{z~p_z}[D(G(z))]  -  E_{x~p_r}[D(x)]  +  λ_GP · E_{x̂~p_x̂}[ (||∇_{x̂} D(x̂)||_2 - 1)² ]
+L_G = -E_{z~p_z}[D(G(z))]
+
+5.  End-to-End Pipeline Architecture
+The framework is organised into 12 sequential phases grouped into five functional stages. Each phase produces well-defined artefacts consumed by subsequent phases, enabling modular development, unit testing, and independent validation.
+
+Phase
+Stage
+Module Name
+Primary Output
+1
+I: Acquisition
+Signal Loader
+inventory.csv, WAV metadata
+2
+I: Acquisition
+Preprocessor
+Filtered, normalised WAV arrays
+3
+II: Spectral
+Spectral Analyser
+FFT, STFT, Mel Spectrogram, Welch PSD
+4
+II: Spectral
+Feature Extractor
+features.csv (60+ features per file)
+5
+III: Signatures
+Signature Discovery
+Per-class averaged PSD templates
+6
+III: Signatures
+Machinery Signatures
+Harmonic peak rankings, BPF estimates
+7
+IV: Decomposition
+NMF Source Estimator
+Component spectra, NMF weights
+8
+IV: Decomposition
+Deep Separator (Conv-TasNet+)
+Separated time-domain source signals
+9
+V: GenAI
+Residual Characteriser
+Gaussianity tests, alpha-stable fit
+10
+V: GenAI
+WGAN-GP / Diffusion Modeller
+Trained generative noise models
+11
+V: GenAI
+Synthetic Generator (TimeGAN)
+Synthetic WAV corpus for augmentation
+12
+VI: Validation
+Classifier + Validator
+Classification accuracy, MSE/KL/JS metrics
+
+Stage I — Signal Acquisition and Preprocessing (Phases 1-2)
+Phase 1: Signal Loading and Inventory
+All WAV files across the four vessel class directories (Cargo, Passengership, Tanker, Tug) are enumerated. Per-file metadata extracted: filename, vessel class, native sample rate F_s, duration T (seconds), bit depth, number of samples L, peak amplitude, and RMS energy level. Results are persisted to outputs/features/inventory.csv. Quality flags are applied: files shorter than 3 seconds, with clipped samples (amplitude > 0.999), or with sample rates below 8 kHz are flagged for manual review.
+
+Phase 2: Preprocessing Chain
+Each WAV signal undergoes the following sequential operations:
+DC Offset Removal: Subtract the sample mean. x[n] ← x[n] - mean(x). Eliminates hydrophone sensor bias voltage.
+Amplitude Normalisation: Peak normalisation. x[n] ← x[n] / max(|x[n]|). Ensures consistent dynamic range across recordings from different hydrophone gain settings.
+Bandpass Filtering: 4th-order Butterworth IIR filter with passband 10 Hz – 1000 Hz (configurable). Applied as zero-phase forward-backward filter (scipy.signal.sosfiltfilt) to eliminate DC content and ultrasonic frequencies irrelevant to machinery signatures. The lower cutoff of 10 Hz preserves infrasonic propeller tones.
+Segmentation: For recordings longer than 30 seconds, the signal is segmented into overlapping 3-second windows (50% overlap) to produce statistically independent analysis frames while maintaining context.
+Before/after waveform comparison plots are saved to outputs/waveforms/ for quality control inspection.
+
+Stage II — Spectral Analysis and Feature Extraction (Phases 3-4)
+Phase 3: Spectral Analysis
+Four complementary spectral representations are computed for every preprocessed signal:
+
+FFT Analysis
+Window: Hanning (N_FFT = 4096 default)
+Resolution: Δf = F_s / N_FFT  (e.g., 11.72 Hz at F_s = 48000 Hz)
+Output: Magnitude spectrum |X(k)|, dominant peaks with frequencies and amplitudes
+Identifies discrete line spectrum components from rotating machinery harmonics
+
+STFT / Spectrogram
+librosa.stft() with N_FFT=2048, hop_length=512
+Time-frequency resolution: Δt = hop_length/F_s, Δf = F_s/N_FFT
+Mel Spectrogram: 128 mel bands, frequency range 10 Hz – 8 kHz
+Captures non-stationarity: engine load changes, speed transients, sea-state variations
+
+Welch PSD
+scipy.signal.welch() with nperseg=4096, noverlap=2048
+Output: Power Spectral Density S_xx(f) in dB/Hz
+Averaged over all segments: variance reduced by factor K (number of segments)
+Primary input to NMF decomposition and machinery signature matching
+
+Phase 4: Feature Extraction (60+ Features per Signal)
+A comprehensive feature vector is computed per signal for use in downstream classifiers and signature matching:
+
+Feature Category
+Features Extracted
+Count
+Application
+Spectral
+Centroid, Bandwidth, Roll-off (85%), Flatness, Contrast, Top-5 peak frequencies/magnitudes
+~15
+Classifier input, signature matching
+Harmonic
+Fundamental frequency f0 (PYIN), Voiced ratio, 2f0/3f0/4f0 energy ratios
+8
+BPF detection, RPM estimation
+Energy
+RMS, Band energy (0-100, 100-300, 300-600, 600-1000 Hz), Total PSD, Crest factor
+10
+Source contribution estimation
+Statistical
+Mean, Variance, Std Dev, Kurtosis, Skewness, Zero-crossing rate
+6
+Gaussianity characterisation
+MFCC
+13 Mel-Frequency Cepstral Coefficients (mean + std each = 26 values)
+26
+Vessel classifier input
+Cepstral
+Real cepstrum peaks in quefrency domain for harmonic family detection
+5
+Machinery identification
+
+Stage III — Acoustic Signature Discovery (Phases 5-6)
+Phase 5: Class-Level Signature Templates
+For each vessel class, all individual PSD profiles are averaged element-wise to produce a class-representative spectral template. Overlaid four-class comparison plots reveal the class-discriminating frequency bands. These per-class templates serve as prior information for NMF initialisation (seeding the basis matrix W with known class spectral shapes accelerates convergence and improves interpretability).
+
+Phase 6: Machinery Signature and BPF Detection
+A harmonic sweep algorithm scores candidate fundamental frequencies against observed PSD peaks:
+For each candidate fundamental f_0 ∈ {10, 12, 15, 18, 20, 25, 30, 40, 50, 60, 80, 100, 120, 150, 180, 200} Hz:
+Compute harmonic set H_k = {f_0, 2f_0, 3f_0, 4f_0, 5f_0, 6f_0}.
+For each harmonic, check if a PSD peak exists within ±Δf/2 of that frequency.
+Score = count of matched harmonics / 6. Highest-scoring candidates are retained as machinery signatures.
+Propeller Blade Passing Frequency: BPF = N_blades × RPM / 60. For typical ships, BPF ranges from 3 Hz (slow tugs) to 50 Hz (fast cargo vessels). BPF harmonics produce the characteristic line spectrum. Detection is performed by identifying equally-spaced PSD peaks via autocorrelation of the PSD.
+
+Stage IV — Source Decomposition (Phases 7-8)
+Phase 7: NMF-Based Source Estimation (Classical Baseline)
+NMF is applied to the PSD matrix to extract R=3 to R=8 latent spectral components (number selected by BIC criterion). Component spectra W[:,r] are inspected and labelled against known machinery spectral profiles:
+Low-frequency tonal component (< 100 Hz): engine shaft rotation and propeller
+Mid-frequency tonal component (100-500 Hz): auxiliary machinery (generators, pumps, compressors)
+Broadband component: cavitation and hydrodynamic noise
+The NMF solution provides contribution weights H[r, τ] for each time frame, which are integrated to give scalar weights w_r. Residual signals are passed to Phase 9.
+
+Phase 8: Deep Time-Domain Separator (GenAI Core — Source Separation)
+The primary source decomposition engine is a parallel dilated group convolutional network based on the Conv-TasNet paradigm, adapted and extended for ship-radiated noise characteristics. The architecture comprises three modules:
+
+Encoder
+1D convolution: K=512 kernels, kernel length L_k=16, stride S=8
+Output: Feature matrix A ∈ R^(K × L_f) where L_f = (L_n - L_k)/S + 1
+ReLU activation ensures non-negativity
+Projects time-domain signal into high-dimensional latent space
+
+Separation Layer (GenAI Core)
+Layer normalisation + bottleneck 1x1 convolution (K1=128 kernels)
+B=3 convolutional blocks, each containing u=8 convolutional units
+Each unit: PARALLEL DILATED GROUP CONVOLUTION
+  Path 1: Fixed dilation d1=1 (no expansion) — captures fine temporal detail
+  Path 2: Exponential dilation d2=2^i (i=unit index) — captures long-range envelope
+Group convolution (U=8 groups) reduces parameter count from 4.43M to 3.67M
+Skip connections accumulate features across all units
+Output: N separation masks m_i ∈ [0,1]^(K × L_f) for N sources
+
+Decoder
+Element-wise multiply: I_i = A ⊙ m_i
+1D transposed convolution: recovers time-domain separated signal
+Dimension-preserving padding ensures output length = input length
+Outputs N separated time-domain signals n_i(t)
+
+Training objective: Scale-Invariant Signal-to-Noise Ratio (SI-SNR):
+SI-SNR = 10 log10( ||n_target||² / ||e||² ),    n_target = (<n_hat, n> / ||n||²) · n,    e = n_hat - n_target
+Training protocol: Adam optimiser, initial LR = 0.001, 100 epochs, LR halved on 3-epoch validation plateau. Mixed training corpus constructed by additively mixing pairs of different-class DeepShip segments at random SNR in [-5, +5] dB (5000 mixtures, split 70:20:10 train:val:test).
+
+Stage V — Generative AI Modelling (Phases 9-11)
+Phase 9: Residual Noise Characterisation
+After source decomposition, the residual ε[n] = x[n] - Σw_i*m_i[n] is subjected to the following statistical characterisation pipeline:
+Kolmogorov-Smirnov test vs. Normal(0,1) at significance α=0.05.
+Shapiro-Wilk test for small samples (n < 5000).
+Excess kurtosis κ_4 and skewness γ_1 computation.
+Classification: Gaussian (|κ_4| < 0.5), Near-Gaussian (0.5 ≤ |κ_4| < 2), Non-Gaussian (2 ≤ |κ_4| < 5), Heavy-tailed/Impulsive (|κ_4| ≥ 5).
+Alpha-stable distribution fitting (scipy.stats.levy_stable) for impulsive residuals.
+Histogram plots with overlaid fitted distributions are saved for each file.
+
+Phase 10: Generative AI Noise and Source Modelling
+Four complementary generative architectures are trained, targeting different aspects of the acoustic generation problem:
+
+10A. WGAN-GP for Residual Noise Distribution Learning
+The WGAN-GP is the primary model for learning the impulsive, non-Gaussian residual noise distribution. Architecture:
+Generator G: Input z ~ N(0, I_{z_dim=128}) → Dense(256, LeakyReLU) → Dense(512, LeakyReLU) → Dense(512, LeakyReLU) → Dense(seg_len=256, Tanh) → output residual segment
+Discriminator D (Critic): Input real/fake segment (256 samples) → Conv1D(64,4) → Conv1D(128,4) → Conv1D(256,4) → Flatten → Dense(1). NO sigmoid (WGAN outputs raw Wasserstein estimate).
+Gradient penalty: λ_GP = 10 on interpolated samples x_hat = α·x_real + (1-α)·x_fake.
+Training: Critic updated 5× per generator update. Adam optimiser, LR=0.0001, β1=0.5, β2=0.9.
+Convergence: Monitored via Wasserstein distance estimate (critic loss). Early stopping at plateau.
+
+10B. Conditional Denoising Diffusion Probabilistic Model (DDPM) for Source Separation
+The DDPM is the state-of-the-art generative model for source separation in this framework. It operates on spectrogram patches conditioned on source identity:
+Conditioning vector c: one-hot encoded source label (Engine, Propeller, Cavitation, Ambient, Generator, Pump) concatenated with vessel class embedding.
+Noise schedule: linear β schedule from β_1=0.0001 to β_T=0.02, T=1000 diffusion steps.
+Score network architecture: U-Net backbone with residual blocks, self-attention at 16×16 and 8×8 resolutions, group normalisation, sinusoidal time embedding, cross-attention conditioning on c.
+Classifier-Free Guidance: Randomly drop conditioning c with probability p_uncond=0.1 during training. At inference: ε_θ(x_t|c) = (1+w)·ε_θ(x_t|c) - w·ε_θ(x_t|∅), where w=3.0 for strong source fidelity.
+Training: AdamW, LR=2e-4, cosine annealing, batch=64 spectrogram patches (64×64 mel bins).
+Inference: DDIM sampler (50 steps, η=0) for fast deterministic reconstruction from separation masks.
+
+10C. Variational Autoencoder (VAE) for Latent Source Representation
+The VAE learns a compact, continuous latent space for each acoustic source type, enabling controlled interpolation and attribute manipulation:
+Encoder q_φ(z|x): Conv1D(32,8)→Conv1D(64,8)→Conv1D(128,4)→Flatten→Dense(512)→[μ_z, log σ²_z] ∈ R^(z_dim=64)
+Reparameterisation: z = μ_z + σ_z ⊙ ε, ε ~ N(0,I)
+Decoder p_θ(x|z): Dense(512)→Reshape→ConvTranspose1D(128,4)→ConvTranspose1D(64,8)→ConvTranspose1D(1,8)
+Loss: L_VAE = -E_q[log p_θ(x|z)] + β · KL(q_φ(z|x) || N(0,I)). β=4 (β-VAE) for disentangled latents.
+Latent space analysis: t-SNE visualisation to confirm class-discriminative structure in z-space.
+
+10D. TimeGAN for Temporal Acoustic Sequence Synthesis
+TimeGAN learns the joint temporal distribution of acoustic sequences, preserving both marginal distributions and time-series dynamics:
+Embedding network: GRU(hidden=128, 3 layers) maps real sequence x_{1:T} to latent trajectory h_{1:T}.
+Recovery network: GRU(128, 3 layers) + Dense → reconstructs x_{1:T} from h_{1:T}. L_recon = ||x - R(E(x))||²_2
+Generator: Takes random trajectory z_{1:T} ~ N(0,I) → GRU(128,3) → synthetic latent h'_{1:T}.
+Discriminator: GRU(128,3) → Dense(1, Sigmoid) → classify real vs. generated latent trajectories.
+Supervised loss: L_sup = E[||h_{t+1} - G(h_t, z_t)||²] ensures generator respects conditional temporal dynamics.
+Joint loss: L = L_GAN + η_1·L_sup + η_2·L_recon, where η_1=η_2=1.0.
+
+Phase 11: Synthetic Acoustic Corpus Generation
+Trained generative models are used to produce a synthetic augmentation corpus:
+WGAN-GP generates 10,000 residual noise segments (256 samples each) per vessel class.
+Conditional DDPM generates 2,000 spectral patches per source type per vessel class.
+TimeGAN generates 5,000 3-second synthetic acoustic sequences across all four vessel classes.
+Synthetic signals are mixed with real extracted source components to form new composite training samples: x_synth(t) = Σ w_i*m_i_real(t) + ε_synth(t).
+Quality filter: Only synthetic samples with FID (Fréchet Inception Distance) < threshold and KL divergence < 0.1 vs. real distribution are retained.
+Final augmented dataset: 2× to 5× expansion of the original DeepShip working subset.
+
+Stage VI — RNL-SBN Mapping, Validation and Classification (Phase 12)
+RNL to SBN Mapping Module
+The RNL-SBN mapping reconstructs the chain from onboard noise sources through hull transfer function and propagation medium to measured hydrophone level:
+RNL(f) = H(f) · [Σ w_i · M_i(f)  +  P(f)  +  C(f)]  +  A(f)  +  E(f)
+H(f) is estimated by deconvolution of the estimated machinery component sum from the observed RNL. A minimum-phase assumption allows stable inversion. The propagation term E(f) is modelled using Thorp's absorption formula for the frequency-dependent attenuation coefficient:
+α(f) = 0.11f²/(1+f²) + 44f²/(4100+f²) + 3×10⁻⁴f² + 0.003    [dB/km]
+This gives the transfer loss TL(r,f) = 20log10(r) + α(f)·r, where r is the estimated hydrophone-to-ship range (obtained from AIS data or estimated from arrival time).
+
+Vessel Classification Models
+The final classifier leverages the augmented dataset and decomposed features across four architecture families:
+
+Model
+Input Representation
+Architecture
+Target Metric
+CNN
+Mel Spectrogram (128×128×1)
+Conv2D×4 + MaxPool + Dense + Softmax
+Top-1 Accuracy on 4 classes
+ResNet-50
+Welch PSD feature vector (1024-D)
+Residual blocks + Global Average Pool + FC
+Macro F1-Score
+CRNN
+STFT spectrogram (time×freq×1)
+Conv2D×3 + Bidirectional GRU(256) + Dense
+Temporal sequence accuracy
+Transformer
+MFCC sequence (T×26)
+Multi-head self-attention (8 heads) + MLP + Class token
+Long-duration accuracy
+
+All classifiers are trained in two configurations: (i) baseline on original DeepShip subset, and (ii) augmented using synthetic data from the generative pipeline. The delta in accuracy quantifies the contribution of the GenAI augmentation module.
+
+6.  GenAI Method Selection and Justification
+The selection of generative architectures for each sub-problem is driven by the specific statistical and temporal characteristics of ship-radiated noise. The table below summarises the method-to-problem mapping and key implementation choices:
+
+Research Objective
+Selected GenAI Method
+Why This Method
+Alternative Considered
+Acoustic source separation from single-channel hydrophone recording
+Conditional DDPM (score-based diffusion)
+Highest sample quality; supports strong conditioning on source label; avoids GAN mode collapse; better distribution coverage than WGAN on high-dimensional spectral data
+Source Separation GAN (SS-GAN) — faster but prone to mode collapse on broadband noise
+Residual non-Gaussian noise modelling
+WGAN-GP
+Wasserstein metric handles heavy-tailed distributions without likelihood; gradient penalty provides stable training on impulsive noise; proven in Xiamen sea noise study
+Normalising flows — tractable likelihood but poor scalability to temporal signals
+Synthetic time-series acoustic sequence generation
+TimeGAN
+Explicitly preserves temporal autocorrelation and stepwise conditional dynamics; superior to standard GAN for sequential data with long-range dependencies
+VAE — captures marginal distribution but loses temporal coherence between time steps
+Latent space acoustic feature learning and interpolation
+β-VAE
+Disentangled continuous latent space enables controlled vessel attribute manipulation; useful for class-conditional synthesis in low-data regimes
+AE (deterministic) — no latent regularisation, poor generative quality
+SBN→RNL mapping and contribution weight estimation
+Generative Mixture Model + Transformer Encoder
+Transformer captures long-range frequency dependencies; mixture model provides interpretable weight outputs with uncertainty estimates
+Linear regression on PSD features — insufficient for non-linear hull transfer function effects
+Ship acoustic signature discovery
+VAE + Latent Source Model
+Unsupervised discovery of acoustic source factors from recordings without labelled individual sources
+k-means on PSD features — hard assignments, no uncertainty, no generative capability
+Acoustic classification data augmentation
+Conditional DDPM + TimeGAN
+DDPM produces high-fidelity spectrogram patches; TimeGAN produces temporally coherent sequences; combination maximises classifier generalization
+Simple signal mixing — does not learn the underlying distribution, cannot extrapolate beyond seen examples
+
+
+7.  Evaluation Framework and Metrics
+7.1  Source Separation Metrics
+Following the conventions established in the DeepShip separation literature (He et al., 2024; Vincent et al., 2006):
+
+Metric
+Definition and Significance
+SNR (Signal-to-Noise Ratio)
+10 log10(||n||² / ||n_hat - n||²). Global measure of separation fidelity.
+SI-SNR (Scale-Invariant SNR)
+SNR computed after projection onto ground truth signal axis. Scale-invariant: robust to amplitude mismatches.
+SNRi (SNR Improvement)
+SNR(separated) - SNR(mixed input). Measures net improvement attributable to the separation system.
+SI-SNRi (SI-SNR Improvement)
+SI-SNR(separated) - SI-SNR(mixed). Primary headline metric in recent literature.
+SegSNR (Segmental SNR)
+Frame-level SNR averaged over all frames. Captures local separation quality and transient fidelity.
+PESQ / POLQA (if applicable)
+Perceptual quality scores adapted for acoustic signals where a human-perceptual analogue is relevant.
+
+7.2  Generative Model Metrics
+Metric
+Definition and Target
+MSE (Mean Squared Error)
+E[||x_real - x_gen||²]. Should converge below baseline MSE of alpha-stable model.
+KL Divergence
+KL(p_real || p_gen). Asymmetric: penalises generator for missing real distribution modes. Target: < 0.05 nats.
+JS Divergence
+Symmetric variant of KL. JS(p_real, p_gen) ∈ [0, log2]. Target: < 0.05 bits.
+FID (Frechet Inception Distance)
+Distance between real and generated spectrogram features in Inception network embedding space. Lower = better quality and diversity.
+Wasserstein Distance (W1)
+Earth mover's distance between real and generated distributions. Monotonically related to WGAN-GP critic loss.
+BER (Bit Error Rate) — if applicable
+Communication system performance under generated noise vs. real noise. Should be within 0.5 dB of real noise curve.
+
+7.3  Classification Metrics
+Metric
+Definition
+Top-1 Accuracy
+Fraction of test samples correctly classified into one of four vessel classes.
+Macro F1-Score
+Unweighted mean of per-class F1 = 2PR/(P+R). Robust to class imbalance.
+Confusion Matrix
+Per-class assignment distribution. Reveals systematic confusions (e.g., Cargo vs. Tanker).
+ROC-AUC (per class, OvR)
+Area under ROC curve in one-vs-rest setting. Measures probabilistic discrimination quality.
+Delta Accuracy (ΔAcc)
+Accuracy(augmented) - Accuracy(baseline). Quantifies GenAI augmentation contribution.
+
+7.4  Ablation Study Design
+To isolate the contribution of each pipeline component, a systematic ablation study is conducted:
+Ablation Configuration
+Components Included
+Expected SNRi Relative to Full System
+Baseline (FFT + NMF only)
+Phases 1-7 only (no deep separator, no GenAI)
+0 dB (reference)
++ Conv-TasNet separator
+Add Phase 8 deep time-domain separator
++ 1.5 to 2.5 dB SI-SNRi
++ WGAN-GP noise model
+Add Phase 10A residual noise modelling
+Improved KL: -0.15 nats
++ Conditional DDPM
+Add Phase 10B source separation diffusion model
++ 0.3 to 0.8 dB SI-SNRi additional
++ TimeGAN augmentation
+Add Phase 11 synthetic corpus
++ 3-8% classification accuracy
+Full system
+All 12 phases + classifier ensemble
+State-of-the-art benchmark
+
+8.  Implementation Roadmap and Software Architecture
+8.1  Phase-by-Phase Implementation Schedule
+Sprint (Weeks)
+Milestone
+Deliverable
+1-2
+Data acquisition and inventory
+inventory.csv, preprocessing pipeline, quality control report
+3-4
+Spectral analysis and feature extraction
+features.csv, PSD/STFT/Mel plots, feature distribution analysis
+5-6
+Machinery signature and BPF detection
+machinery_signatures.csv, class PSD overlay plots
+7-10
+NMF decomposition and weight estimation
+nmf_weights.csv, component spectra plots, RNL-SBN mapping v1
+11-16
+Deep separator (Conv-TasNet+) training
+Trained separator model, separation SNR benchmark results
+17-20
+WGAN-GP and VAE training
+Trained noise models, MSE/KL/JS evaluation vs. GMM baseline
+21-24
+Conditional DDPM training
+Trained diffusion model, source separation quality metrics
+25-27
+TimeGAN training and synthetic corpus generation
+Synthetic WAV corpus, FID and temporal quality scores
+28-30
+Classifier training and ablation study
+Classification accuracy table, confusion matrices, delta accuracy
+31-33
+Final integration, deployment packaging
+Docker container, REST API, complete research paper draft
+
+8.2  Software Architecture
+The pipeline is implemented as a modular Python package with the following top-level structure:
+
+Repository Layout
+project/
+├── run_pipeline.py          Master orchestrator — executes all 12 phases
+├── requirements.txt         Pinned Python dependencies
+├── src/
+│   ├── config.py            Central configuration (paths, hyperparameters)
+│   ├── preprocessing/       Phases 1-2: loader.py, preprocess.py
+│   ├── spectral/            Phase 3: spectral_analysis.py
+│   ├── features/            Phase 4: feature_extraction.py
+│   ├── signatures/          Phases 5-6: signature_discovery.py, machinery_signatures.py
+│   ├── decomposition/       Phases 7-8: nmf_estimator.py, deep_separator.py
+│   ├── genai/               Phases 9-11:
+│   │   ├── residual_analysis.py    Phase 9
+│   │   ├── wgan_gp.py              Phase 10A
+│   │   ├── ddpm_separator.py       Phase 10B
+│   │   ├── vae_latent.py           Phase 10C
+│   │   ├── timegan.py              Phase 10D
+│   │   └── synthetic_generator.py  Phase 11
+│   ├── mapping/             RNL-SBN mapping module
+│   ├── classification/      Phase 12: cnn.py, resnet.py, crnn.py, transformer.py
+│   └── validation/          Metrics: separation, generative, classification
+└── outputs/                 All plots, CSVs, model checkpoints
+
+8.3  Hardware Requirements
+Component
+Specification
+GPU (Training)
+NVIDIA A100 80GB or equivalent (V100 32GB minimum for diffusion model training)
+GPU (Inference)
+NVIDIA RTX 3090 24GB or equivalent
+RAM
+64 GB minimum; 128 GB recommended for full DeepShip dataset in-memory
+Storage
+2 TB NVMe SSD for dataset, model checkpoints, synthetic corpus
+CPU
+16+ cores for parallel preprocessing and feature extraction
+OS
+Ubuntu 22.04 LTS (recommended); CUDA 12.1, cuDNN 8.9
+
+8.4  Key Dependencies
+Library
+Version  /  Purpose
+PyTorch
+≥ 2.1.0  —  Deep learning framework for all GenAI models
+torchaudio
+≥ 2.1.0  —  Audio I/O, spectral transforms, MFCCs
+librosa
+≥ 0.10.1  —  Mel spectrogram, STFT, feature extraction
+scipy
+≥ 1.11.0  —  Welch PSD, Butterworth filter, statistical tests
+numpy
+≥ 1.24.0  —  Numerical computing
+scikit-learn
+≥ 1.3.0  —  NMF, GMM, evaluation metrics
+soundfile
+≥ 0.12.0  —  WAV I/O
+matplotlib / seaborn
+≥ 3.8.0  —  Visualisation
+pandas
+≥ 2.0.0  —  Feature CSV management
+diffusers (HuggingFace)
+≥ 0.25.0  —  DDPM / DDIM implementation
+einops
+≥ 0.7.0  —  Tensor reshaping for Transformer/attention
+
+9.  Project Deliverables
+Upon completion, the project will produce five primary operational deliverables:
+
+SBN → RNL Mapping Module: A calibrated transfer function model mapping individual onboard noise sources to measured hydrophone RNL. Includes frequency-dependent hull transfer function H(f) estimates per vessel class and propagation loss model for the operating environment.
+
+Machinery Contribution Weight Estimator: A trained model (Generative Mixture Model + Transformer encoder) that accepts a new hydrophone recording and outputs per-source contribution weights w_i with associated uncertainty bounds. Includes harmonic BPF detection for propeller RPM estimation.
+
+Residual Noise Model: Trained WGAN-GP and DDPM models capturing the statistical distribution of non-Gaussian residual noise for each vessel class. Deployable for BER testing of naval acoustic communication systems and for generating realistic environmental noise in simulation.
+
+Synthetic Acoustic Generator: A Python API wrapping the trained TimeGAN and conditional DDPM models, capable of generating configurable-duration synthetic hydrophone recordings for any vessel class, specified RPM range, and sea state condition. Critical for training data augmentation without operational risk.
+
+Improved Ship Classification System: An ensemble classifier (CNN + CRNN + Transformer with confidence-weighted voting) trained on the augmented corpus, with expected accuracy improvements of 5-15% over DeepShip baselines. Packaged as a Docker container with REST API endpoint for real-time operational deployment.
+
+Additionally, intermediate research deliverables include:
+inventory.csv, features.csv, machinery_signatures.csv, nmf_weights.csv — tabular analysis artefacts
+Per-file waveform, FFT, PSD, spectrogram plots — visual QA corpus
+Training loss curves and convergence diagnostics for all GenAI models
+Ablation study results table and confusion matrices
+Research paper draft ready for journal submission (target: IEEE Transactions on Geoscience and Remote Sensing / Journal of Marine Science and Engineering)
+
+10.  Research Paper Architecture
+The research findings will be consolidated into a peer-reviewed journal article. The proposed structure:
+
+Section
+Content
+Title
+A Generative AI Framework for Blind Source Decomposition and Synthetic Data Generation from Underwater Ship-Radiated Noise
+Abstract (250 words)
+Problem, proposed method, key results (SI-SNRi improvement, KL divergence, classification accuracy delta), dataset
+1. Introduction
+Motivation, operational significance, contributions list, paper organisation
+2. Related Work
+Signal processing baselines, BSS/ICA, deep separation networks, GANs for acoustics, diffusion models
+3. Physical Signal Model
+RNL equation, component taxonomy, assumptions and limitations
+4. Proposed Framework
+12-phase pipeline overview diagram, mathematical formulations for each GenAI model
+5. Experimental Setup
+DeepShip dataset, preprocessing parameters, training hyperparameters, hardware
+6. Results — Source Separation
+SNR/SI-SNR/SegSNR tables, time-frequency plot comparisons, ablation study
+7. Results — Generative Modelling
+MSE/KL/JS comparisons vs. GMM and alpha-stable baselines, distribution overlay plots
+8. Results — Classification
+Accuracy tables (baseline vs. augmented), confusion matrices, ROC curves
+9. Discussion
+Physical interpretation of recovered components, failure mode analysis, naval operational implications
+10. Conclusion and Future Work
+Summary of contributions, multi-channel extension, operational deployment roadmap
+References
+~50 citations targeting IEEE/JMSE/JASA/INTERSPEECH
+
+10.1  Expected Benchmark Results
+Based on the literature review and the architectural choices made, the following performance targets are projected:
+Metric
+Current SOTA (He et al. 2024)
+Target (This Framework)
+Delta
+SNR (dB)
+16.86
+17.5 – 18.5
++ 0.64 – 1.64 dB
+SegSNR (dB)
+17.75
+18.5 – 19.5
++ 0.75 – 1.75 dB
+SNRi (dB)
+17.30
+18.0 – 19.0
++ 0.70 – 1.70 dB
+SI-SNRi (dB)
+2.53
+3.5 – 5.0
++ 0.97 – 2.47 dB
+Residual KL divergence
+(baseline GMM: ~0.25)
+< 0.05 nats
+Δ -0.20 nats
+Vessel classification (4-class)
+~85% (est. DeepShip baseline)
+92 – 96% (augmented)
++ 7-11%
+
+Note: Projections are informed by analogous improvements reported in domain-transfer applications of conditional diffusion models and TimeGAN. Actual results may deviate depending on the quality of the DeepShip working subset and GPU compute time available. All results must be validated against the held-out test set under the same train/val/test split used in He et al. (2024) for fair comparison.
+
+11.  Risk Register and Mitigation
+Risk
+Severity / Likelihood
+Mitigation Strategy
+Insufficient training data (only 33 WAV files in working subset)
+High / High
+Primary: Apply TimeGAN and conditional DDPM for synthetic augmentation. Secondary: Contact dataset authors (mirfan@mail.nwpu.edu.cn) for full 265-ship access.
+Conditional DDPM training instability on spectral patches
+Medium / Medium
+Start with WGAN-GP as fallback; use established HuggingFace diffusers library; monitor FID during training; reduce conditioning guidance weight w if mode collapse detected.
+NMF component mislabelling (ambiguous source assignment)
+Medium / High
+Initialise W with known machinery spectral templates; apply physical frequency constraints (BPF bounds); validate against reference vessel acoustic databases.
+Non-stationarity invalidating fixed-weight mixture model
+High / Medium
+Use short analysis frames (3s) with time-varying weight estimation via H[r,τ]; flag high-variance weight sequences for manual review.
+Hull transfer function estimation error
+Medium / Medium
+Estimate H(f) from multiple recordings of the same vessel class; apply regularisation (Tikhonov) in deconvolution; report confidence bounds on H(f).
+WGAN-GP training instability (gradient penalty sensitivity)
+Low / Medium
+Tune λ_GP ∈ {1, 5, 10, 20}; use spectral normalisation as an alternative; monitor Wasserstein distance every 100 iterations.
+Overfitting classifier on small dataset
+High / High
+Data augmentation (primary); dropout 0.5, weight decay 1e-4; k-fold cross-validation (k=5); early stopping on validation loss.
+Computational budget exceeded by diffusion model
+Medium / High
+Use DDIM sampler (50 steps vs. 1000); distil diffusion model using consistency models after initial training; train on 64×64 patches rather than full spectrograms.
+
+12.  Key References
+The following references inform the theoretical and methodological foundations of this framework:
+
+He, Q., Wang, H., Zeng, X., & Jin, A. (2024). Ship-Radiated Noise Separation in Underwater Acoustic Environments Using a Deep Time-Domain Network. Journal of Marine Science and Engineering, 12, 885.
+Luo, Y., & Mesgarani, N. (2019). Conv-TasNet: Surpassing Ideal Time-Frequency Magnitude Masking for Speech Separation. IEEE/ACM Transactions on Audio, Speech, and Language Processing, 27, 1256-1266.
+Irfan, M., Jiangbin, Z., Ali, S., Iqbal, M., Masood, Z., & Hamid, U. (2021). DeepShip: An underwater acoustic benchmark dataset and a separable convolution based autoencoder for classification. Expert Systems with Applications, 183, 115270.
+Goodfellow, I.J., et al. (2014). Generative Adversarial Nets. Advances in Neural Information Processing Systems, 27.
+Gulrajani, I., Ahmed, F., Arjovsky, M., Dumoulin, V., & Courville, A. (2017). Improved Training of Wasserstein GANs. NeurIPS.
+Ho, J., Jain, A., & Abbeel, P. (2020). Denoising Diffusion Probabilistic Models. NeurIPS.
+Song, J., Meng, C., & Ermon, S. (2021). Denoising Diffusion Implicit Models. ICLR.
+Ho, J., & Salimans, T. (2022). Classifier-Free Diffusion Guidance. NeurIPS Workshop on DGMs.
+Yoon, J., Jarrett, D., & van der Schaar, M. (2019). Time-series Generative Adversarial Networks. NeurIPS.
+Higgins, I., et al. (2017). β-VAE: Learning Basic Visual Concepts with a Constrained Variational Framework. ICLR.
+Lee, D.D., & Seung, H.S. (1999). Learning the parts of objects by non-negative matrix factorization. Nature, 401, 788-791.
+Hyvärinen, A., & Oja, E. (2000). Independent component analysis: algorithms and applications. Neural Networks, 13, 411-430.
+Mansour, A., Benchekroun, N., & Gervaise, C. (2006). Blind Separation of Underwater Acoustic Signals. ICA 2006.
+Urick, R.J. (1983). Principles of Underwater Sound, 3rd ed. McGraw-Hill.
+Vincent, E., Gribonval, R., & Fevotte, C. (2006). Performance measurement in blind audio source separation. IEEE Transactions on Audio, Speech, and Language Processing, 14, 1462-1469.
+Kong, Q., Cao, Y., Liu, H., & Choi, K. (2021). Decoupling Magnitude and Phase Estimation with Deep ResUNet for Music Source Separation. ISMIR 2021.
+Vaswani, A., et al. (2017). Attention Is All You Need. NeurIPS.
+Tan, K., Chen, J., & Wang, D. (2019). Gated Residual Networks with Dilated Convolutions for Monaural Speech Enhancement. IEEE/ACM TASLP, 27, 189-198.
+
+
+Appendix A — Configuration Reference (src/config.py)
+Parameter
+Value and Description
+TARGET_SR
+None (preserve native sample rate) or 22050 Hz for resampled corpus
+BANDPASS_LOW
+10 Hz — preserves infrasonic propeller tones
+BANDPASS_HIGH
+1000 Hz — covers all machinery line spectrum components
+FILTER_ORDER
+4 (Butterworth IIR, zero-phase via sosfiltfilt)
+N_FFT
+4096 — frequency resolution Δf = F_s/N_FFT
+HOP_LEN
+512 — STFT temporal resolution
+N_MELS
+128 — Mel spectrogram frequency bands
+WELCH_NPERSEG
+4096 — PSD segment length
+N_MFCC
+13 — MFCC coefficient count
+NMF_COMPONENTS
+5 (range 3-8, BIC-selected)
+SEG_DURATION
+3.0 seconds (consistent with DeepShip separation paper)
+Z_DIM_GAN
+128 — WGAN-GP generator input latent dimension
+Z_DIM_VAE
+64 — VAE latent dimension
+DIFFUSION_T
+1000 — DDPM diffusion steps
+DDIM_STEPS
+50 — DDIM inference steps
+GUIDANCE_SCALE
+3.0 — Classifier-free guidance weight
+TIMEGAN_HIDDEN
+128 — TimeGAN GRU hidden dimension
+CLASSIFIER_BATCH
+64 — Training batch size for all classifiers
+CLASSIFIER_LR
+0.0001 — Initial learning rate (Adam)
+
+Appendix B — Acoustic Frequency Map for Naval Vessels
+Source Component
+Typical Frequency Range and Characteristics
+Engine shaft rotation (fundamental)
+5 – 30 Hz: strongest line in low-frequency spectrum; varies with RPM
+Engine harmonics (2f, 3f, 4f, 5f, 6f)
+10 – 180 Hz: family of equally spaced tonal peaks; RPM-tracking
+Generator fundamental
+40 – 80 Hz: typically locked to 50 or 60 Hz power supply frequency
+Pump and compressor
+60 – 300 Hz: broadened tonal peaks due to flow turbulence
+Gearbox whine
+200 – 800 Hz: gear mesh frequency = N_teeth × RPM / 60
+Propeller BPF (tonal)
+3 – 50 Hz (fundamental); harmonics up to 300 Hz
+Propeller cavitation (broadband)
+1 – 50 kHz: white-noise-like above cavitation inception speed
+Hydrodynamic flow noise
+100 Hz – 10 kHz: rises steeply with vessel speed
+Hull resonances
+50 – 500 Hz: vessel-specific modal frequencies; fixed with loading
+Ambient ocean noise (Knudsen sea noise)
+< 500 Hz dominant; wind-speed dependent; characterised by Wenz curves

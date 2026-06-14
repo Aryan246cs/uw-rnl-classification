@@ -13,6 +13,9 @@ venv/
 .venv/
 *.egg-info/
 
+# Pipeline cache
+project/outputs/.cache/
+
 # Pipeline outputs (generated, not source)
 project/outputs/waveforms/
 project/outputs/fft/
@@ -23,6 +26,9 @@ project/outputs/reports/residuals/
 project/outputs/reports/noise_models/
 project/outputs/reports/validation/
 project/outputs/reports/gan/
+
+# Separated component/residual audio (Phase 7b) - large WAVs, regenerable
+project/outputs/decomposition/separated_audio/
 
 # Keep these committed (summary reports and CSVs worth versioning)
 !project/outputs/reports/dataset_cleanup_report.md
@@ -38,3 +44,9 @@ project/outputs/reports/gan/
 *.pth
 *.npy
 *.pkl
+
+# Run logs
+project/*.log
+
+# Editor settings
+.vscode/

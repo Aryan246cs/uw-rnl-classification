@@ -1,0 +1,133 @@
+filename,class,category,role,contribution_weight,dominant_freqs_Hz,n_nmf_components
+15.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.342348,"[93.75, 78.12]",2
+15.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.378143,"[125.0, 109.38, 156.25, 171.88]",4
+15.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.033662,[],0
+27.wav,Cargo,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.252484,"[656.25, 328.12]",2
+27.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.372712,"[156.25, 234.38, 140.62, 187.5]",4
+27.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.1021,[],0
+38.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.317269,"[78.12, 46.88, 93.75]",3
+38.wav,Cargo,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.091007,[15.62],1
+38.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.16875,"[203.12, 140.62]",2
+38.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.070974,[],0
+41.wav,Cargo,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.219529,"[718.75, 359.38]",2
+41.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.375919,"[140.62, 218.75, 250.0, 171.88]",4
+41.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.101664,[],0
+44.wav,Cargo,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.080856,[31.25],1
+44.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.34714,"[46.88, 78.12, 93.75]",3
+44.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.145182,"[140.62, 234.38]",2
+44.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.063276,[],0
+62.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.550955,"[46.88, 78.12, 62.5]",3
+62.wav,Cargo,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.107573,"[31.25, 15.62]",2
+62.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.040711,[109.38],1
+62.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.021722,[],0
+69.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.304039,"[46.88, 62.5]",2
+69.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.206441,"[281.25, 171.88, 234.38]",3
+69.wav,Cargo,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.081363,[31.25],1
+69.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.06415,[],0
+78.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.417631,"[78.12, 62.5, 93.75]",3
+78.wav,Cargo,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.093182,[468.75],1
+78.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.134134,"[125.0, 171.88]",2
+78.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.068857,[],0
+96.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.423138,"[218.75, 140.62, 109.38, 171.88]",4
+96.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.117658,[62.5],1
+96.wav,Cargo,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.08453,[421.88],1
+96.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.085924,[],0
+99.wav,Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.545702,"[78.12, 93.75, 62.5]",3
+99.wav,Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.259882,"[109.38, 140.62, 171.88]",3
+99.wav,Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.026784,[],0
+1.wav,Passengership,"Hull & High-Frequency Machinery (tonal, >800 Hz)",machinery_source (w_i*m_i),0.135901,[828.12],1
+1.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.168907,"[46.88, 78.12]",2
+1.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.123257,"[234.38, 109.38]",2
+1.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.04285,[781.25],1
+1.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.099865,[],0
+4.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.492596,"[93.75, 78.12, 46.88]",3
+4.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.044757,[687.5],1
+4.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.114075,"[109.38, 125.0]",2
+4.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.032151,[],0
+5.wav,Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.352083,"[0.0, 0.0, 31.25]",3
+5.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.047028,[375.0],1
+5.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.052339,[140.62],1
+5.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.063933,[78.12],1
+5.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.084006,[],0
+6.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.47496,"[468.75, 515.62, 625.0, 421.88]",4
+6.wav,Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.053701,[31.25],1
+6.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.050912,[140.62],1
+6.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.107369,[],0
+8.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.553104,"[578.12, 421.88, 421.88]",3
+8.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.032767,[62.5],1
+8.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.083947,[281.25],1
+8.wav,Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.068768,[31.25],1
+8.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.042047,[],0
+9.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.231888,"[312.5, 406.25]",2
+9.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.270298,"[187.5, 218.75, 125.0]",3
+9.wav,Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.060867,[31.25],1
+9.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.07316,[],0
+12.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.249404,"[78.12, 62.5]",2
+12.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.215898,"[328.12, 421.88]",2
+12.wav,Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.079171,[31.25],1
+12.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.058237,[109.38],1
+12.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.061874,[],0
+14.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.43169,"[62.5, 46.88, 78.12, 93.75]",4
+14.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.037829,[125.0],1
+14.wav,Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.101348,[484.38],1
+14.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.0812,[],0
+16.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.432854,"[93.75, 78.12, 46.88]",3
+16.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.260187,"[109.38, 125.0, 140.62]",3
+16.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.03121,[],0
+17.wav,Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.202643,"[171.88, 125.0]",2
+17.wav,Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.073865,[31.25],1
+17.wav,Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.278947,"[62.5, 46.88, 93.75]",3
+17.wav,Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.085963,[],0
+2.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.318204,"[156.25, 187.5, 125.0]",3
+2.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.263232,"[46.88, 62.5]",2
+2.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.077789,[15.62],1
+2.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.070324,[],0
+5.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.431762,"[46.88, 78.12, 62.5]",3
+5.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.067075,[437.5],1
+5.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.141303,"[31.25, 0.0]",2
+5.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.052801,[],0
+6.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.476581,"[62.5, 78.12, 46.88]",3
+6.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.041778,[406.25],1
+6.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.051709,[15.62],1
+6.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.056024,[109.38],1
+6.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.045517,[],0
+8.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.274301,"[421.88, 406.25]",2
+8.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.267584,"[125.0, 234.38, 156.25]",3
+8.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.044711,[31.25],1
+8.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.088239,[],0
+9.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.391137,"[78.12, 93.75, 62.5]",3
+9.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.133593,[15.62],1
+9.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.119265,"[203.12, 125.0]",2
+9.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.052491,[],0
+10.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.47724,"[0.0, 31.25, 15.62]",3
+10.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.070405,[265.62],1
+10.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.074208,[46.88],1
+10.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.039635,[453.12],1
+10.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.04579,[],0
+12.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.333251,"[140.62, 125.0, 156.25]",3
+12.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.251314,"[93.75, 78.12]",2
+12.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.065321,[390.62],1
+12.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.035924,[],0
+13.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.780424,"[62.5, 78.12, 46.88, 93.75]",4
+13.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.104623,"[31.25, 0.0]",2
+13.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.010976,[],0
+14.wav,Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.187467,"[140.62, 125.0]",2
+14.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.109766,[375.0],1
+14.wav,Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.207568,"[93.75, 62.5]",2
+14.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.072638,[31.25],1
+14.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.063239,[],0
+18.wav,Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.542108,"[468.75, 515.62, 437.5, 343.75]",4
+18.wav,Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.152055,"[0.0, 31.25]",2
+18.wav,Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.102531,[],0
+9.wav,Tug,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.158719,"[328.12, 390.62]",2
+9.wav,Tug,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.211808,[31.25],1
+9.wav,Tug,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.071759,[78.12],1
+9.wav,Tug,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.114535,"[171.88, 125.0]",2
+9.wav,Tug,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.071878,[],0
+40.wav,Tug,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.393719,"[546.88, 437.5, 406.25]",3
+40.wav,Tug,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.048761,[93.75],1
+40.wav,Tug,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.118409,"[156.25, 187.5]",2
+40.wav,Tug,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.105456,[],0
+49.wav,Tug,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.68922,"[734.38, 453.12, 375.0, 343.75, 421.88]",5
+49.wav,Tug,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.044735,[156.25],1
+49.wav,Tug,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.102964,[],0

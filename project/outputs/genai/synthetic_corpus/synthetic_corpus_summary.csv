@@ -1,0 +1,12 @@
+source,class,n_generated,kl_vs_real,retained
+WGAN-GP,Cargo,2000,0.11481,True
+WGAN-GP,Passengership,2000,0.07756,True
+WGAN-GP,Tanker,2000,0.19054,False
+Conditional-DDPM,Cargo,200,,True
+Conditional-DDPM,Passengership,200,,True
+Conditional-DDPM,Tanker,200,,True
+Conditional-DDPM,Tug,200,,True
+TimeGAN,Cargo,500,,True
+TimeGAN,Passengership,500,,True
+TimeGAN,Tanker,500,,True
+TimeGAN,Tug,500,,True

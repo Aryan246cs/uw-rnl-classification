@@ -1,0 +1,22 @@
+class,category,role,contribution_weight
+Cargo,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.0639113
+Cargo,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.09019975
+Cargo,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.16243125
+Cargo,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.36784275
+Cargo,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.25050120000000003
+Passengership,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.06988449999999999
+Passengership,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.11474249999999998
+Passengership,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.213979125
+Passengership,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.26888725
+Passengership,"Hull & High-Frequency Machinery (tonal, >800 Hz)",machinery_source (w_i*m_i),0.135901
+Passengership,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.1253724
+Tanker,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.0567832
+Tanker,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.13951788888888889
+Tanker,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.16285485714285716
+Tanker,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.35952825
+Tanker,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.19317142857142858
+Tug,"Cavitation, Flow & Ambient Noise (broadband residual)",residual (Phase 9/10A input),0.09343266666666666
+Tug,"Engine Shaft & Propeller BPF (tonal, <40 Hz)",machinery_source (w_i*m_i),0.211808
+Tug,"Gearbox / Gear-mesh (tonal, 300-800 Hz)",machinery_source (w_i*m_i),0.41388600000000003
+Tug,"Generator (tonal, 40-100 Hz)",machinery_source (w_i*m_i),0.06026
+Tug,"Pumps & Compressors (tonal, 100-300 Hz)",machinery_source (w_i*m_i),0.09255966666666667

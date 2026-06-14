@@ -10,6 +10,7 @@ from scipy.signal import find_peaks
 from pathlib import Path
 
 from src.config import OUTPUTS_REPORTS
+from src.decomposition.machinery_decomposition import classify_frequency_band
 
 
 def detect_harmonic_series(
@@ -53,6 +54,7 @@ def run_machinery_analysis(spectral_results: dict) -> pd.DataFrame:
                     "candidate_f0_Hz": f0,
                     "harmonic_score": score,
                     "harmonics_found": str(harmonics),
+                    "machinery_category": classify_frequency_band(f0),
                 }
             )
 
@@ -65,11 +67,6 @@ def run_machinery_analysis(spectral_results: dict) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    from src.preprocessing.loader import inventory_dataset
-    from src.preprocessing.preprocess import run_preprocessing
-    from src.spectral.spectral_analysis import run_spectral_analysis
+    from src.bootstrap import get_spectral
 
-    df_inv = inventory_dataset()
-    prep = run_preprocessing(df_inv)
-    spec = run_spectral_analysis(prep)
-    run_machinery_analysis(spec)
+    run_machinery_analysis(get_spectral())
