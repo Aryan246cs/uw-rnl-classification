@@ -22,6 +22,7 @@ from src.decomposition.residual_analysis import run_residual_analysis
 from src.modeling.noise_modeling import run_noise_modeling
 from src.genai.wgan_gp import run_wgan_gp
 from src.genai.vae_latent import run_vae
+from src.classification.component_pipeline import run_component_classification
 from src.genai.timegan import run_timegan
 from src.genai.ddpm_separator import run_ddpm
 from src.genai.synthetic_generator import run_synthetic_generation
@@ -101,6 +102,10 @@ def main():
     # Phase 10C – Beta-VAE latent source representation
     print("\n[Phase 10C] Beta-VAE Latent Source Representation")
     run_vae(time_residuals)
+
+    # Phase 7c – Machinery-component classification (GAN-augmented)
+    print("\n[Phase 7c] Machinery-Component Classification (GAN-Augmented)")
+    run_component_classification(preprocessed)
 
     # Phase 10D – TimeGAN temporal sequence synthesis
     print("\n[Phase 10D] TimeGAN Temporal Sequence Synthesis")

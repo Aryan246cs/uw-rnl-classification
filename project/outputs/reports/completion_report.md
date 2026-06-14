@@ -43,6 +43,7 @@ Output per file: 5 named component signals + 1 residual signal, their energy wei
 | 6 | Machinery signature exploration: harmonic-series detection + Appendix B label | peak-finding |
 | 7 | Global NMF (3 comp.) on PSD matrix → feeds Phase 12a | sklearn NMF |
 | **7b** | **Per-file machinery source decomposition (core deliverable)** | per-file STFT-NMF (R=6) + Wiener masking |
+| **7c** | **Machinery-component classification (GAN-augmented)** — classify a segment by *which machinery component produced it*, using Phase 7b's per-component segments as labels | 1D-CNN classifier + WGAN-GP per-category augmentation |
 | 8 | Residual `ε[n]` statistical characterization (KS, Shapiro, kurtosis) | scipy.stats |
 | 9 | Residual noise modeling baseline | Gaussian Mixture Model (2/3/5 comp.) + α-stable fit |
 | 10A | Generative model of `ε[n]` for data augmentation | WGAN-GP (1D-CNN critic, 200 epochs, λ_GP=10, 4000 segments/class) |
@@ -51,7 +52,7 @@ Output per file: 5 named component signals + 1 residual signal, their energy wei
 | 10D | Temporal sequence synthesis | TimeGAN (Embedder/Recovery/Generator/Supervisor/Discriminator) |
 | 11 | Synthetic corpus assembly + KL quality gate (KL<0.15) | — |
 | 12a | RNL→SBN mapping: hull transfer function `H(f)` (measured PSD / NMF-reconstructed PSD) + Thorp transfer-loss model | Thorp absorption formula |
-| 12b | Vessel classification, baseline vs. GenAI-augmented | CNN, ResNet-lite, CRNN, Transformer + Ensemble |
+
 
 ---
 
@@ -118,23 +119,24 @@ These models were trained **on the Phase 7b residual `ε[n]`** (or, for classifi
 | **Conditional DDPM (Phase 10B)** | Class-conditioned U-Net diffusion model over 32×32 log-mel spectrogram patches — generates *time-frequency* synthetic patches (captures joint structure a 1D residual can't), for the synthetic corpus. | Training loss dropped monotonically **0.0757 → 0.0195** over 120 epochs — healthy convergence, no collapse. 200 patches/class generated, no quality gate applied yet. |
 | **Beta-VAE (Phase 10C)** | Learns a smooth 64-dim latent space of residual segments — tests whether the *noise floor alone* carries class information, and provides a second generative pathway. β=4, 150 epochs. | Recon loss ≈0.97–1.07, KL≈0.0096–0.0104. Latent silhouette score **negative (-0.028 to -0.030)** → residual noise floor alone is **not** class-discriminative; classification needs the full mel-spectrogram. |
 | **TimeGAN (Phase 10D)** | Generates longer synthetic *waveform sequences* per class, preserving temporal dynamics (unlike WGAN-GP's short segments or VAE's static latent space). | All 4 classes converged to the textbook Nash-equilibrium values (G≈0.69, D≈1.386, i.e. discriminator outputs 0.5 everywhere) — most reliably converged GenAI model in the pipeline. |
-| **CNN / ResNet-lite / CRNN / Transformer + Ensemble (Phase 12b)** | The actual end-task: classify a recording's vessel class from mel-spectrogram patches (CNN/ResNet/CRNN) or MFCC sequence (Transformer), to test whether decomposition-derived augmentation helps real classification. | Best baseline: **CRNN, acc=0.582, F1=0.528**. With WGAN-GP augmentation, ensemble accuracy moved **0.554 → 0.524** (per-model deltas −0.073 to −0.015) — augmentation effect is **small and within the high-variance range of a 33-file dataset**, not a clear win in this run. |
+| **Machinery-Component Classifier + per-category WGAN-GP (Phase 7c)** | The actual end-task for this pipeline: classify a 256-sample segment by *which machinery component produced it* (Engine/Propeller, Generator, Pumps & Compressors, Gearbox, Hull/HF, or Cavitation/Flow/Ambient residual), using Phase 7b's per-component decomposition as ground-truth labels. A WGAN-GP is trained per category (same recipe as 10A) to generate synthetic component segments for augmentation. | Baseline accuracy **70.7%**, GAN-augmented accuracy **71.0%** (6-class task, random guess ≈16.7%). Augmentation improved F1 for **3/6 categories** (notably the hardest class, Cavitation/Flow/Ambient: F1 0.506→0.525). |
 
-**Net takeaway**: the GenAI models work as designed (WGAN-GP/TimeGAN converge, DDPM denoises, quality gates reject the one bad fit), and they confirm `ε[n]` is genuinely non-trivial noise — but on this small dataset, augmentation did **not** translate into a clear classification accuracy improvement. Their primary value here is *validating the residual* and *demonstrating the augmentation pipeline end-to-end*, not yet a proven accuracy boost.
+**Net takeaway**: the GenAI models work as designed (WGAN-GP/TimeGAN converge, DDPM denoises, quality gates reject the one bad fit), and they confirm `ε[n]` is genuinely non-trivial noise. The machinery-component classifier (Phase 7c) — which directly operationalises the `x[n] = Sum mᵢ[n] + ε[n]` decomposition — reaches **~71% accuracy at distinguishing which machinery source a segment came from**, far above the ~16.7% random-guess baseline for 6 classes. GAN augmentation gives a small, mostly positive nudge (+0.4pp overall, improving 3 of 6 categories) rather than a dramatic jump — consistent with the rest of this pipeline's findings on a 33-file dataset.
 
-### Classifier accuracy, in plain terms
+### Component classifier accuracy, in plain terms
 
-"Accuracy" = out of all the short audio segments tested, what % did the model correctly guess the vessel class for (Cargo / Tanker / Passengership / Tug)? Random guessing among 4 classes would be ~25%.
+"Accuracy" = out of all the short audio segments tested, what % did the model correctly guess the **machinery component** for (Engine/Propeller, Generator, Pumps & Compressors, Gearbox, Hull/HF Machinery, or Cavitation/Flow/Ambient residual)? Random guessing among 6 classes would be ~16.7%.
 
-| Model | Without augmentation (baseline) | With GAN-augmented data | What it means |
+| Category | Without augmentation (baseline F1) | With GAN-augmented data (F1) | What it means |
 |---|---|---|---|
-| **CNN** | 48.6% | 46.1% | Got about half right; augmentation made it slightly worse |
-| **ResNet-lite** | 56.3% | 51.5% | Best single non-recurrent model; augmentation hurt it a bit |
-| **CRNN** | 58.2% | 50.8% | **Best model overall**, ~58% correct; augmentation hurt it the most |
-| **Transformer** | 32.6% | 31.1% | Weakest model — barely better than random guessing |
-| **Ensemble** (all 4 combined) | 55.4% | 52.4% | Combining all models gives a solid ~55%, but augmentation slightly lowered it too |
+| **Hull & High-Frequency Machinery** | 0.871 | 0.869 | **Easiest to identify** — very distinct high-frequency signature |
+| **Generator** | 0.743 | 0.753 | Strong result, slightly improved by augmentation |
+| **Engine Shaft & Propeller BPF** | 0.736 | 0.728 | Strong result; augmentation made it marginally worse |
+| **Gearbox / Gear-mesh** | 0.691 | 0.695 | Decent, slightly improved by augmentation |
+| **Pumps & Compressors** | 0.685 | 0.677 | Decent; augmentation made it marginally worse |
+| **Cavitation, Flow & Ambient (residual)** | 0.506 | 0.525 | **Hardest to identify** (broadband/noise-like by definition), but augmentation helped the most here |
 
-The best model (CRNN) gets it right roughly 6 out of 10 times; the worst (Transformer) only about 3 out of 10 — close to random chance. With only 33 recordings total, these percentages can swing a lot from run to run, so treat them as rough indicators, not exact scores.
+**Overall accuracy: 70.7% → 71.0%** with GAN augmentation. With only 33 recordings total, these percentages can shift from run to run, so treat them as directional rather than exact scores — but the overall picture (named machinery components are clearly distinguishable from segment audio, except for the inherently broadband residual) matches the physical interpretation in Section 5.
 
 ---
 

@@ -8,11 +8,15 @@ analysis) produced by ``run_pipeline.py``, then:
      named components + time-domain residual eps[n].
   2. Re-runs residual noise analysis/modeling (Phases 8-9) and re-trains
      the WGAN-GP / Beta-VAE residual-noise generators (Phases 10A/10C).
-  3. Runs the WGAN-GP gradient-penalty and Beta-VAE beta-sensitivity
+  3. Re-runs Phase 7c (machinery-component classification): trains a
+     classifier on Phase 7b's per-component segments, trains a per-category
+     WGAN-GP to generate synthetic component segments, and compares
+     baseline vs. GAN-augmented classification accuracy.
+  4. Runs the WGAN-GP gradient-penalty and Beta-VAE beta-sensitivity
      ablation studies.
-  4. Rebuilds outputs/reports/final_report.md covering the decomposition
-     and residual-noise-modeling phases plus the ablation studies, with
-     full provenance.
+  5. Rebuilds outputs/reports/final_report.md covering the decomposition,
+     residual-noise-modeling, and component-classification phases plus the
+     ablation studies, with full provenance.
 """
 
 import sys
@@ -26,6 +30,7 @@ from src.decomposition.residual_analysis import run_residual_analysis
 from src.modeling.noise_modeling import run_noise_modeling
 from src.genai.wgan_gp import run_wgan_gp
 from src.genai.vae_latent import run_vae
+from src.classification.component_pipeline import run_component_classification
 from src.ablation.run_ablations import run_ablations
 from src.reporting.generate_report import build_report
 
@@ -56,6 +61,9 @@ def main():
 
     print("[post_run] Phase 10C - training Beta-VAE on time-domain residuals ...")
     run_vae(time_residuals)
+
+    print("[post_run] Phase 7c - machinery-component classification (GAN-augmented) ...")
+    run_component_classification(prep)
 
     # Phase 12b (Vessel Classification) de-emphasized — pipeline focus is
     # source decomposition (Phase 7b) + residual noise modeling (Phases 8-10C).

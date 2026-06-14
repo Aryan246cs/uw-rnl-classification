@@ -64,7 +64,12 @@ Around that core decomposition, the pipeline also builds:
   3. Per-file source decomposition (the core deliverable, Phase 7b)
   4. Residual noise statistical modeling
   5. GenAI-based synthetic noise generation (WGAN-GP, Beta-VAE, TimeGAN, DDPM)
-  6. RNL-SBN mapping (hull transfer function + propagation loss)
+  6. Machinery-component classification, GAN-augmented (Phase 7c): a 1D-CNN
+     classifier trained on Phase 7b's per-component segments to predict which
+     machinery category (engine/propeller, generator, pumps, gearbox, hull,
+     or ambient/cavitation residual) a segment belongs to, compared with and
+     without WGAN-GP-generated synthetic segments
+  7. RNL-SBN mapping (hull transfer function + propagation loss)
 
 Note: vessel classification (formerly Phase 12b) has been de-emphasized —
 it is not run by default. The pipeline's focus is decomposition and residual
@@ -90,6 +95,8 @@ per-class component contributions, and model results).
   |   +-- features/             inventory.csv, features.csv (Phases 1, 4)
   |   +-- decomposition/         Phase 7b: per-file decomposition CSVs, plots,
   |   |                          separated component/residual audio
+  |   +-- component_classification/  Phase 7c: machinery-component classifier
+  |   |                          (baseline vs. GAN-augmented) CSV + plot
   |   +-- genai/                 WGAN-GP, Beta-VAE, TimeGAN, DDPM outputs + synthetic corpus
   |   +-- mapping/                Phase 12a: hull transfer function, transfer loss
   |   +-- ablation/                WGAN-GP / Beta-VAE ablation studies
@@ -141,6 +148,7 @@ per-class component contributions, and model results).
 | 6 | Machinery signature exploration — harmonic-series detection + Appendix B frequency-band label |
 | 7 | Global PSD-domain NMF (3 components) — feeds Phase 12a |
 | **7b** | **Per-file machinery source decomposition (core deliverable)** — STFT-NMF (R=6) + Wiener masking + Appendix B labelling -> named components + residual `eps[n]` |
+| **7c** | **Machinery-component classification (GAN-augmented)** — 1D-CNN classifier on Phase 7b's per-component segments, labeled by Appendix B category; WGAN-GP per category generates synthetic segments; baseline vs. augmented accuracy compared |
 | 8 | Residual noise analysis (KS, Shapiro-Wilk, kurtosis/skewness) on `eps[n]` |
 | 9 | GMM (2/3/5 components, BIC-selected) + alpha-stable baseline fit on `eps[n]` |
 | 10A | WGAN-GP — learns `eps[n]` distribution per class for data augmentation |

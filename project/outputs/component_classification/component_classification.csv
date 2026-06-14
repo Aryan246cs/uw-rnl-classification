@@ -1,0 +1,7 @@
+category,n_segments,n_train_segments,n_val_segments,n_synthetic_segments,baseline_precision,baseline_recall,baseline_f1,augmented_precision,augmented_recall,augmented_f1,baseline_overall_accuracy,augmented_overall_accuracy
+"Cavitation, Flow & Ambient Noise (broadband residual)",4000,3200,800,1000,0.497,0.515,0.5058,0.5216,0.5288,0.5251,0.7065,0.7102
+"Engine Shaft & Propeller BPF (tonal, <40 Hz)",4000,3200,800,1000,0.6831,0.7975,0.7359,0.7054,0.7512,0.7276,0.7065,0.7102
+"Gearbox / Gear-mesh (tonal, 300-800 Hz)",4000,3200,800,1000,0.7205,0.6637,0.691,0.7246,0.6675,0.6949,0.7065,0.7102
+"Generator (tonal, 40-100 Hz)",4000,3200,800,1000,0.7773,0.7113,0.7428,0.7566,0.75,0.7533,0.7065,0.7102
+"Hull & High-Frequency Machinery (tonal, >800 Hz)",4000,3200,800,1000,0.8333,0.9125,0.8711,0.8122,0.935,0.8693,0.7065,0.7102
+"Pumps & Compressors (tonal, 100-300 Hz)",4000,3200,800,1000,0.7384,0.6388,0.685,0.7332,0.6288,0.677,0.7065,0.7102

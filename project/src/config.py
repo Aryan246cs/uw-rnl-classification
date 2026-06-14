@@ -104,5 +104,11 @@ CLASSIFIER_FOLDS = 3
 MEL_PATCH_SIZE = 64  # square mel-spectrogram patch fed to classifiers
 MAX_SEGMENTS_PER_FILE_CLF = 32  # cap segments/file for training
 
+# Phase 7c — machinery-component classification (GAN-augmented)
+OUTPUTS_COMPONENT_CLF = OUTPUTS / "component_classification"
+COMPONENT_MAX_SEGMENTS_PER_CATEGORY = 4000  # subsample cap, mirrors MAX_SEGMENTS_PER_CLASS
+COMPONENT_MIN_SEGMENTS_FOR_GAN = 16  # below this, skip WGAN-GP for that category
+COMPONENT_SYNTH_PER_CATEGORY = 1000  # synthetic segments generated per category
+
 # Phase 12 — RNL-SBN mapping
 ASSUMED_RANGES_M = [500, 1000, 2000, 5000]  # hydrophone-to-ship ranges (m)

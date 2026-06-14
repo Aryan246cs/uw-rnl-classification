@@ -1,6 +1,6 @@
 # DeepShip Underwater Radiated Noise (URN) Analysis
 ## GenAI-Driven Decomposition, Synthetic Acoustic Corpus & RNL-SBN Mapping — Final Report
-_Generated: 2026-06-14 11:14:41_
+_Generated: 2026-06-14 12:01:04_
 
 This report walks through **every stage of the pipeline, in plain language**, from raw WAV files to named machinery-source decomposition and GenAI-based residual noise modeling. Each section states **what was done, why, what the numbers mean, and exactly which output file backs the claim** so every result can be traced back to its source (provenance).
 
@@ -185,6 +185,33 @@ For one illustrative file per class, the pipeline also saves:
 - `outputs/decomposition/separated_audio/<Class>/` — separated **WAV audio** for the original signal, each named component, and the residual (listenable proof of the decomposition)
 
 _Sources: `outputs/decomposition/machinery_decomposition.csv`, `machinery_decomposition_summary.csv`_
+
+---
+
+## 7c. Machinery-Component Classification — GAN-Augmented (Phase 7c)
+
+**What this step does:** turns Phase 7b's per-file decomposition into a labeled training set — every named component signal `m_i[n]` and the residual `eps[n]` is cut into the same 256-sample segments used by Phase 10A, each segment labeled with its Appendix-B machinery category (Engine Shaft & Propeller BPF, Generator, Pumps & Compressors, Gearbox / Gear-mesh, Hull & High-Frequency Machinery, or the residual Cavitation/Flow/Ambient Noise category). A 1D-CNN classifier (same architecture family as Phase 10A's critic, with a classification head) is trained to predict *which machinery component produced this segment*.
+
+**GAN augmentation**: for each category, a WGAN-GP (identical generator/critic architecture and training recipe as Phase 10A) is trained on that category's training segments, run for 200 epochs of adversarial generator/critic updates until the generator produces segments the critic can no longer reliably separate from real ones. Each trained generator then produces 1000 synthetic segments for its category, which are added to the training set. The classifier is then retrained from scratch on this real+synthetic set and evaluated on the same held-out validation segments, so baseline and augmented accuracy are directly comparable.
+
+**Why**: this is the component-level analogue of the (now-removed) vessel-type classifier — it answers *'given a short segment of hydrophone audio, which machinery source produced it?'*, directly operationalising the `x[n] = Sum_i m_i[n] + eps[n]` decomposition, and tests whether GAN-generated synthetic component segments (Phase 10A-style augmentation) improve that classification.
+
+**Overall validation accuracy**: baseline (real segments only) = **70.7%**, GAN-augmented = **71.0%**.
+
+| Category | Segments (train / val) | Synthetic added | Baseline F1 | Augmented F1 |
+|---|---|---|---|---|
+| Cavitation, Flow & Ambient Noise | 3200 / 800 | 1000 | 0.506 | 0.525 |
+| Engine Shaft & Propeller BPF | 3200 / 800 | 1000 | 0.736 | 0.728 |
+| Gearbox / Gear-mesh | 3200 / 800 | 1000 | 0.691 | 0.695 |
+| Generator | 3200 / 800 | 1000 | 0.743 | 0.753 |
+| Hull & High-Frequency Machinery | 3200 / 800 | 1000 | 0.871 | 0.869 |
+| Pumps & Compressors | 3200 / 800 | 1000 | 0.685 | 0.677 |
+
+GAN augmentation improved per-category F1 for **3/6** categories. As with the rest of this pipeline (Section 14, point 1), these figures come from a 33-file dataset and should be read as directional, not as production-grade accuracy numbers.
+
+- `outputs/component_classification/component_classification_f1.png` — baseline vs. GAN-augmented F1 per category
+
+_Source: `outputs/component_classification/component_classification.csv`_
 
 ---
 
@@ -416,6 +443,9 @@ outputs/
 │   │   machinery_decomposition_summary.csv          (Phase 7b)
 │   ├── plots/<Class>_<file>_decomposition.png       (Phase 7b)
 │   └── separated_audio/<Class>/*.wav                (Phase 7b)
+├── component_classification/
+│   ├── component_classification.csv                 (Phase 7c)
+│   └── component_classification_f1.png              (Phase 7c)
 ├── genai/
 │   ├── wgan_gp/wgan_gp_training_<Class>.png        (Phase 10A)
 │   ├── vae/vae_training_loss.png,

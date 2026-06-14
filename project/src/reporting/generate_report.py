@@ -16,7 +16,7 @@ from datetime import datetime
 from src import config
 from src.config import (
     OUTPUTS, OUTPUTS_REPORTS, OUTPUTS_FEATURES, OUTPUTS_GENAI,
-    OUTPUTS_MAPPING, PROJECT_ROOT,
+    OUTPUTS_MAPPING, OUTPUTS_COMPONENT_CLF, PROJECT_ROOT,
 )
 from src.decomposition.machinery_decomposition import CATEGORY_DESCRIPTIONS, RESIDUAL_LABEL
 from src.device import get_device
@@ -330,6 +330,71 @@ def build_report():
              "(listenable proof of the decomposition)")
     L.append(f"\n_Sources: `outputs/decomposition/machinery_decomposition.csv`, "
              f"`machinery_decomposition_summary.csv`_\n")
+    L.append("---\n")
+
+    # ════════════════════════════════════════════════════════════════════
+    # 7c. Machinery-component classification (GAN-augmented)
+    # ════════════════════════════════════════════════════════════════════
+    L += ["## 7c. Machinery-Component Classification — GAN-Augmented (Phase 7c)", ""]
+    L.append("**What this step does:** turns Phase 7b's per-file decomposition into a "
+             "labeled training set — every named component signal `m_i[n]` and the "
+             "residual `eps[n]` is cut into the same "
+             f"{config.RESIDUAL_SEGMENT_LEN}-sample segments used by Phase 10A, each "
+             "segment labeled with its Appendix-B machinery category (Engine Shaft & "
+             "Propeller BPF, Generator, Pumps & Compressors, Gearbox / Gear-mesh, Hull & "
+             "High-Frequency Machinery, or the residual Cavitation/Flow/Ambient Noise "
+             "category). A 1D-CNN classifier (same architecture family as Phase 10A's "
+             "critic, with a classification head) is trained to predict *which "
+             "machinery component produced this segment*.")
+    L.append("")
+    L.append("**GAN augmentation**: for each category, a WGAN-GP (identical "
+             "generator/critic architecture and training recipe as Phase 10A) is "
+             f"trained on that category's training segments, run for "
+             f"{config.WGAN_EPOCHS} epochs of adversarial generator/critic updates "
+             "until the generator produces segments the critic can no longer reliably "
+             f"separate from real ones. Each trained generator then produces "
+             f"{config.COMPONENT_SYNTH_PER_CATEGORY} synthetic segments for its "
+             "category, which are added to the training set. The classifier is then "
+             "retrained from scratch on this real+synthetic set and evaluated on the "
+             "same held-out validation segments, so baseline and augmented accuracy are "
+             "directly comparable.")
+    L.append("")
+    L.append("**Why**: this is the component-level analogue of the (now-removed) "
+             "vessel-type classifier — it answers *'given a short segment of "
+             "hydrophone audio, which machinery source produced it?'*, directly "
+             "operationalising the `x[n] = Sum_i m_i[n] + eps[n]` decomposition, and "
+             "tests whether GAN-generated synthetic component segments (Phase 10A-style "
+             "augmentation) improve that classification.")
+
+    df_comp_clf = _read_csv(OUTPUTS_COMPONENT_CLF / "component_classification.csv")
+    if df_comp_clf is not None:
+        L.append("")
+        base_acc = df_comp_clf["baseline_overall_accuracy"].iloc[0]
+        aug_acc = df_comp_clf["augmented_overall_accuracy"].iloc[0]
+        L.append(f"**Overall validation accuracy**: baseline (real segments only) = "
+                 f"**{base_acc:.1%}**, GAN-augmented = **{aug_acc:.1%}**.")
+        L.append("")
+        L.append("| Category | Segments (train / val) | Synthetic added | "
+                 "Baseline F1 | Augmented F1 |")
+        L.append("|---|---|---|---|---|")
+        for _, row in df_comp_clf.iterrows():
+            cat_short = row["category"].split(" (")[0]
+            L.append(
+                f"| {cat_short} | {int(row['n_train_segments'])} / "
+                f"{int(row['n_val_segments'])} | {int(row['n_synthetic_segments'])} | "
+                f"{row['baseline_f1']:.3f} | {row['augmented_f1']:.3f} |"
+            )
+        L.append("")
+        n_improved = int((df_comp_clf["augmented_f1"] > df_comp_clf["baseline_f1"]).sum())
+        n_total = len(df_comp_clf)
+        L.append(f"GAN augmentation improved per-category F1 for **{n_improved}/{n_total}** "
+                 "categories. As with the rest of this pipeline (Section 14, point 1), "
+                 "these figures come from a 33-file dataset and should be read as "
+                 "directional, not as production-grade accuracy numbers.")
+        L.append("")
+        L.append("- `outputs/component_classification/component_classification_f1.png` — "
+                 "baseline vs. GAN-augmented F1 per category")
+    L.append(f"\n_Source: `outputs/component_classification/component_classification.csv`_\n")
     L.append("---\n")
 
     # ════════════════════════════════════════════════════════════════════
@@ -794,6 +859,9 @@ def build_report():
         "│   │   machinery_decomposition_summary.csv          (Phase 7b)",
         "│   ├── plots/<Class>_<file>_decomposition.png       (Phase 7b)",
         "│   └── separated_audio/<Class>/*.wav                (Phase 7b)",
+        "├── component_classification/",
+        "│   ├── component_classification.csv                 (Phase 7c)",
+        "│   └── component_classification_f1.png              (Phase 7c)",
         "├── genai/",
         "│   ├── wgan_gp/wgan_gp_training_<Class>.png        (Phase 10A)",
         "│   ├── vae/vae_training_loss.png,",
