@@ -512,7 +512,3 @@ Cargo:
 6. **Get 97% accuracy** 🎉
 
 **Key insight:** Frequency is the right way to look at ship sounds. Components are separated by frequency. Once you show the CNN frequencies instead of raw waveforms, it gets 97% accuracy easily.
-
----
-
-Generated: 2026-06-16 | For beginners

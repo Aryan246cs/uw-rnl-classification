@@ -99,6 +99,44 @@ X_val = (X_val - feat_mean) / feat_std  # Use train statistics
 
 **Impact:** Improved component separation quality, fewer warnings.
 
+### 6. **What's L1 Sparsity Regularization?**
+
+NMF (decomposition algorithm) finds components. Without sparsity:
+```
+Component 1: [0.5, 0.3, 0.2, 0.4, 0.1, 0.2, ...]  ← Many small values
+Component 2: [0.1, 0.4, 0.2, 0.3, 0.5, 0.1, ...]  ← Messy, overlaps
+```
+
+**L1 sparsity = Force components to be cleaner:**
+```
+Component 1: [0.9, 0.0, 0.0, 0.1, 0.0, 0.0, ...]  ← Few strong values
+Component 2: [0.0, 0.85, 0.0, 0.15, 0.0, 0.0, ...]  ← Cleaner!
+```
+
+**Effect:** Components are more specialized (Engine is just Engine, Pump is just Pump).
+
+### 7. **What's Residual Infusion? (40-50%)**
+
+After you separate components, there's always leftover noise:
+```
+Original signal = Engine + Gearbox + Pumps + Residual_noise
+```
+
+The **residual_noise** is everything you couldn't separate (cavitation bubbles, random ocean noise, etc.).
+
+**Residual Infusion = Mix 45% of old residual noise back into new signal**
+
+```
+New signal = Original + (45% × Old_residual)
+```
+
+**Why?**
+- NMF algorithm is lazy, ignores small noises
+- By adding 45% of residual, NMF says "oh, I see this noise pattern now"
+- NMF separates better
+
+**Effect:** +2-3% accuracy boost
+
 ---
 
 ## Architecture & Hyperparameters
@@ -429,9 +467,3 @@ The signal 1.wav is decomposed as:
 - Pumps: 20.0% ↑ **+6.4%**
 
 **Key insight:** The optimization revealed that **Engine and Hull were masked by residual noise** in the original decomposition. They're actually much more significant contributors than the raw energy-based weights suggested.
-
----
-
-**Generated:** 2026-06-16 08:52 UTC  
-**Hardware:** RTX 5070 Ti | CUDA 12.x | Python 3.12  
-**Repository:** `c:\Users\VECTOR\Downloads\DeepShip`
