@@ -30,8 +30,13 @@ project/outputs/reports/gan/
 # Separated component/residual audio (Phase 7b) - large WAVs, regenerable
 project/outputs/decomposition/separated_audio/
 
-# Keep these committed (summary reports and CSVs worth versioning)
+# Improved pipeline outputs (large CSVs and generated data)
+project/outputs/improved_pipeline/*.csv
+project/outputs/improved_pipeline/*.pkl
+
+# Keep markdown reports committed
 !project/outputs/reports/dataset_cleanup_report.md
+!project/outputs/improved_pipeline/*.md
 
 # Notebooks checkpoints
 .ipynb_checkpoints/
@@ -45,8 +50,10 @@ project/outputs/decomposition/separated_audio/
 *.npy
 *.pkl
 
-# Run logs
+# Run logs and temporary outputs
 project/*.log
+*_run_log.txt
+*.output
 
 # Editor settings
 .vscode/
